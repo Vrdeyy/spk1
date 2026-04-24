@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(PEMINJAM)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  loans         Loan[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  PETUGAS
+  PEMINJAM
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tools     Tool[]
+
+  @@map("categories")
+}
+
+model Tool {
+  id         String   @id @default(cuid())
+  name       String
+  brand      String
+  categoryId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  units      ToolUnit[]
+  loanItems  LoanItem[]
+
+  @@map("tools")
+}
+
+model ToolUnit {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  status    UnitStatus @default(AVAILABLE)
+  toolId    String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  tool      Tool       @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  loanUnits LoanUnit[]
+
+  @@map("tool_units")
+}
+
+enum UnitStatus {
+  AVAILABLE
+  BORROWED
+  DAMAGED
+}
+
+model Loan {
+  id        String     @id @default(cuid())
+  userId    String
+  status    LoanStatus @default(PENDING)
+  reason    String     @db.Text
+  noteAdmin String?    @db.Text
+  dueDate   DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  items     LoanItem[]
+  loanUnits LoanUnit[]
+  return_   Return?
+
+  @@map("loans")
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ONGOING
+  DONE
+}
+
+model LoanItem {
+  id           String @id @default(cuid())
+  loanId       String
+  toolId       String
+  qtyRequested Int
+  qtyApproved  Int    @default(0)
+
+  loan         Loan   @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  tool         Tool   @relation(fields: [toolId], references: [id])
+
+  @@map("loan_items")
+}
+
+// Track which physical unit is assigned to which loan
+model LoanUnit {
+  id         String   @id @default(cuid())
+  loanId     String
+  toolUnitId String
+
+  loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  toolUnit   ToolUnit @relation(fields: [toolUnitId], references: [id])
+
+  @@unique([loanId, toolUnitId])
+  @@map("loan_units")
+}
+
+model Return {
+  id         String   @id @default(cuid())
+  loanId     String   @unique
+  returnedAt DateTime @default(now())
+  fineLate   Int      @default(0)
+  fineDamage Int      @default(0)
+  note       String?  @db.Text
+
+  loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("returns")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Setting {
+  id         String @id @default("default")
+  finePerDay Int    @default(5000)
+
+  @@map("settings")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  target    String
+  details   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
