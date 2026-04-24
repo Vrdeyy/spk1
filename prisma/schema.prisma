@@ -98,6 +98,7 @@ enum LoanStatus {
   APPROVED
   REJECTED
   ONGOING
+  AWAITING_FINE
   DONE
 }
 

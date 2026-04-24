@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole, handleApiError } from "@/lib/permission";
+import { createActivityLog } from "@/services/activityLogService";
 
 // POST: Admin/Petugas picks up (APPROVED -> ONGOING, assign physical units)
 export async function POST(
@@ -8,12 +9,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requireRole("ADMIN", "PETUGAS");
+    const session = await requireRole("ADMIN", "PETUGAS");
 
     const loan = await prisma.$transaction(async (tx) => {
       const existing = await tx.loan.findUnique({
         where: { id: params.id },
-        include: { items: true },
+        include: { items: { include: { tool: true } } },
       });
 
       if (!existing) throw new Error("Pinjaman tidak ditemukan");
@@ -51,6 +52,13 @@ export async function POST(
           });
         }
       }
+
+      await createActivityLog(
+        session.user.id,
+        "PICKUP_LOAN",
+        `Pinjaman ${params.id}`,
+        `Barang diambil oleh peminjam. Status: Sedang Dipinjam.`
+      );
 
       return tx.loan.update({
         where: { id: params.id },

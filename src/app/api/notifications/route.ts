@@ -20,17 +20,50 @@ export async function GET() {
 }
 
 // PUT mark all as read
-export async function PUT() {
+export async function PUT(request: Request) {
   try {
     const session = await requireAuth();
+    const body = await request.json().catch(() => ({}));
 
-    await prisma.notification.updateMany({
-      where: { userId: session.user.id, isRead: false },
-      data: { isRead: true },
-    });
+    if (body.id) {
+        // Mark single as read
+        await prisma.notification.update({
+            where: { id: body.id, userId: session.user.id },
+            data: { isRead: true },
+        });
+    } else {
+        // Mark all as read
+        await prisma.notification.updateMany({
+            where: { userId: session.user.id, isRead: false },
+            data: { isRead: true },
+        });
+    }
 
-    return NextResponse.json({ message: "Semua notifikasi ditandai dibaca" });
+    return NextResponse.json({ message: "Notifikasi diperbarui" });
   } catch (error) {
     return handleApiError(error);
   }
+}
+
+// DELETE notifications
+export async function DELETE(request: Request) {
+    try {
+        const session = await requireAuth();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+
+        if (id) {
+            await prisma.notification.delete({
+                where: { id, userId: session.user.id }
+            });
+        } else {
+            await prisma.notification.deleteMany({
+                where: { userId: session.user.id }
+            });
+        }
+
+        return NextResponse.json({ message: "Notifikasi dihapus" });
+    } catch (error) {
+        return handleApiError(error);
+    }
 }

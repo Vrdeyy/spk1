@@ -131,54 +131,65 @@ export default function DashboardPage() {
           <div className="table-header">
             <h3>Pinjaman Terbaru</h3>
           </div>
-          <table>
-            <thead>
-              <tr>
-                {(role === "ADMIN" || role === "PETUGAS") && <th>Peminjam</th>}
-                <th>Barang</th>
-                <th>Status</th>
-                <th>Tanggal</th>
-                <th>Tenggat</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loans?.slice?.(0, 10)?.map?.((loan: any) => (
-                <tr key={loan.id}>
-                  {(role === "ADMIN" || role === "PETUGAS") && (
-                    <td style={{ color: "var(--text-primary)", fontWeight: 500 }}>
-                      {loan.user?.name}
-                    </td>
-                  )}
-                  <td>
-                    {loan.items?.map((item: any) => (
-                      <div key={item.id} style={{ fontSize: "0.8rem" }}>
-                        {item.tool?.name} × {item.qtyRequested}
-                      </div>
-                    ))}
-                  </td>
-                  <td>
-                    <span className={`badge badge-${loan.status?.toLowerCase()}`}>
-                      {loan.status}
-                    </span>
-                  </td>
-                  <td>{formatDate(loan.createdAt)}</td>
-                  <td>{formatDate(loan.dueDate)}</td>
-                </tr>
-              ))}
-              {(!loans || loans.length === 0) && (
+          <div className="table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={5} className="table-empty">
-                    <div className="icon">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ opacity: 0.3 }}>
-                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>
-                      </svg>
-                    </div>
-                    <div>Belum ada data pinjaman</div>
-                  </td>
+                  {(role === "ADMIN" || role === "PETUGAS") && <th>Peminjam</th>}
+                  <th>Alat & Barang</th>
+                  <th>Status</th>
+                  <th>Tenggat</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loans?.slice?.(0, 10)?.map?.((loan: any) => (
+                  <tr key={loan.id}>
+                    {(role === "ADMIN" || role === "PETUGAS") && (
+                      <td>
+                        <div className="td-user">
+                          <div className="td-user-avatar">
+                            {loan.user?.name?.[0]?.toUpperCase()}
+                          </div>
+                          <div className="td-user-name">{loan.user?.name}</div>
+                        </div>
+                      </td>
+                    )}
+                    <td>
+                      <div className="td-item-info">
+                        {loan.items?.map((item: any) => (
+                          <div key={item.id} className="td-item-main">
+                            {item.tool?.name} <span className="td-item-sub">× {item.qtyRequested}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${loan.status?.toLowerCase()}`}>
+                        {loan.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: "var(--sidebar-navy)" }}>
+                        {formatDate(loan.dueDate)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {(!loans || loans.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="table-empty">
+                      <div className="icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ opacity: 0.3 }}>
+                          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/>
+                        </svg>
+                      </div>
+                      <div>Belum ada data pinjaman</div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

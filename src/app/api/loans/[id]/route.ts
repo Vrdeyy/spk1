@@ -117,7 +117,7 @@ export async function PUT(
           session.user.id,
           "REJECT_LOAN",
           `Pinjaman ${params.id}`,
-          data.noteAdmin || ""
+          `Admin menolak peminjaman. Alasan: ${data.noteAdmin || "-"}`
         );
         return tx.loan.update({
           where: { id: params.id },
@@ -157,7 +157,7 @@ export async function PUT(
         session.user.id,
         "APPROVE_LOAN",
         `Pinjaman ${params.id}`,
-        data.noteAdmin || ""
+        `Admin menyetujui peminjaman. Status: Siap Diambil.`
       );
 
       return tx.loan.update({

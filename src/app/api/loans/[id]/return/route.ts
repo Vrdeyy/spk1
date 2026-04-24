@@ -6,6 +6,7 @@ import {
   createNotification,
   notifyAdminsAndPetugas,
 } from "@/services/notificationService";
+import { createActivityLog } from "@/services/activityLogService";
 
 // POST: User initiates return (creates Return record, status still ONGOING)
 export async function POST(
@@ -63,13 +64,31 @@ export async function POST(
         },
       });
 
+      // KEY LOGIC: If damage reported OR it's being finalized with damage, move to AWAITING_FINE
+      const hasDamage = data.damagedUnitIds && data.damagedUnitIds.length > 0;
+      
+      await tx.loan.update({
+        where: { id: params.id },
+        data: {
+          status: hasDamage ? "AWAITING_FINE" : "ONGOING"
+        }
+      });
+
+      await createActivityLog(
+        session.user.id,
+        "INITIATE_RETURN",
+        `Pinjaman ${params.id}`,
+        `Peminjam mengajukan pengembalian. ${hasDamage ? "Dilaporkan ada kerusakan (Butuh Penilaian Admin)." : "Semua barang dilaporkan baik."}`
+      );
+
       return returnRecord;
     });
 
     // Notify staff
+    const hasDamage = data.damagedUnitIds && data.damagedUnitIds.length > 0;
     await notifyAdminsAndPetugas(
-      "Permintaan Pengembalian",
-      `Pengembalian pinjaman #${params.id.slice(-6)} telah diajukan`
+      hasDamage ? "⚠️ Butuh Penilaian Denda" : "Permintaan Pengembalian",
+      `${session.user?.name || "User"} mengajukan pengembalian #${params.id.slice(-6).toUpperCase()}.${hasDamage ? " ADA KERUSAKAN." : ""}${data.note ? ` Pesan: ${data.note}` : ""}`
     );
 
     return NextResponse.json(result, { status: 201 });
@@ -98,8 +117,15 @@ export async function PUT(
       if (!existing) throw new Error("Pinjaman tidak ditemukan");
       if (existing.status === "DONE") throw new Error("Pinjaman sudah selesai");
 
+      // VALIDATION: Only Admin can set denda
+      if (session.user.role === "PETUGAS" && data.fineDamage > 0) {
+        throw new Error("Hanya Admin yang berwenang menetapkan nominal denda kerusakan.");
+      }
+
+      const hasDamageInInput = data.damagedUnitIds && data.damagedUnitIds.length > 0;
+
       if (!existing.return_) {
-        // Create return directly by Admin
+        // Create return directly (Case where return request hasn't been made yet)
         const settings = await tx.setting.findFirst();
         const finePerDay = settings?.finePerDay || 5000;
         const now = new Date();
@@ -132,16 +158,21 @@ export async function PUT(
         });
       }
 
-      // Release all borrowed units back to AVAILABLE (except DAMAGED ones)
+      // Update unit status to AVAILABLE or DAMAGED
       for (const lu of existing.loanUnits) {
-        if (lu.toolUnit.status === "BORROWED") {
-          const isDamaged = data.damagedUnitIds?.includes(lu.toolUnitId);
-          await tx.toolUnit.update({
-            where: { id: lu.toolUnitId },
-            data: { status: isDamaged ? "DAMAGED" : "AVAILABLE" },
-          });
-        }
+        const isDamaged = data.damagedUnitIds?.includes(lu.toolUnitId);
+        await tx.toolUnit.update({
+          where: { id: lu.toolUnitId },
+          data: { status: isDamaged ? "DAMAGED" : "AVAILABLE" },
+        });
       }
+
+      await createActivityLog(
+        session.user.id,
+        "FINALIZE_RETURN",
+        `Pinjaman ${params.id}`,
+        `${session.user.role === "ADMIN" ? "Admin" : "Petugas"} menyelesaikan pengembalian. Status: Selesai.`
+      );
 
       return tx.loan.update({
         where: { id: params.id },

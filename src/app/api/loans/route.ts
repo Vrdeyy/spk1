@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole, handleApiError } from "@/lib/permission";
 import { loanRequestSchema } from "@/lib/validations";
 import { notifyAdminsAndPetugas } from "@/services/notificationService";
+import { createActivityLog } from "@/services/activityLogService";
 
 // GET loans (filtered by role)
 export async function GET(request: Request) {
@@ -93,6 +94,13 @@ export async function POST(request: Request) {
           user: { select: { name: true } },
         },
       });
+
+      await createActivityLog(
+        session.user.id,
+        "CREATE_LOAN",
+        `Pinjaman ${newLoan.id}`,
+        `Pengguna mengajukan pinjaman baru untuk ${newLoan.items.length} jenis alat.`
+      );
 
       return newLoan;
     });
