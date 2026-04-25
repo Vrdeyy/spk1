@@ -82,6 +82,16 @@ export async function PUT(
           }
         }
 
+        if (data.paymentStatus) {
+          await tx.return.updateMany({
+            where: { loanId: params.id },
+            data: { 
+              paymentStatus: data.paymentStatus as any,
+              paidAt: data.paymentStatus === "PAID" ? new Date() : null
+            }
+          });
+        }
+
         await createActivityLog(
           session.user.id,
           "UPDATE_LOAN",
@@ -91,7 +101,7 @@ export async function PUT(
 
         return tx.loan.findUnique({
           where: { id: params.id },
-          include: { user: true, items: { include: { tool: true } } },
+          include: { user: true, items: { include: { tool: true } }, return_: true },
         });
       });
 

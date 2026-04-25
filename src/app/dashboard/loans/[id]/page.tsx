@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function LoanDetailPage() {
   const params = useParams();
@@ -14,6 +15,54 @@ export default function LoanDetailPage() {
   const { data: loan, isLoading, isError } = useQuery({
     queryKey: ["loan", loanId],
     queryFn: () => fetch(`/api/loans/${loanId}`).then((r) => r.json()),
+  });
+
+  const queryClient = useQueryClient();
+  
+  const pickupMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/loans/${id}/pickup`, { method: "POST" }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json();
+          throw new Error(err.error);
+        }
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loan", loanId] });
+    },
+  });
+
+  const receiveMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`/api/loans/${id}/receive`, { method: "POST" }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json();
+          throw new Error(err.error);
+        }
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loan", loanId] });
+    },
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: ({ status }: { status: "PAID" | "UNPAID" }) =>
+      fetch(`/api/loans/${loanId}/payment`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json();
+          throw new Error(err.error);
+        }
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loan", loanId] });
+    },
   });
 
   const formatDate = (d: string) => {
@@ -59,11 +108,15 @@ export default function LoanDetailPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <h1 style={{ marginBottom: 0 }}>Detail Pinjaman #{loanId.slice(-6).toUpperCase()}</h1>
-              <span className={`badge badge-${(loan.status === "ONGOING" && loan.return_) ? "pending" : loan.status === "AWAITING_FINE" ? "warning" : loan.status?.toLowerCase()}`}>
+              <span className={`badge badge-${(loan.status === "ONGOING" && loan.return_) ? "pending" : loan.status === "AWAITING_FINE" ? "warning" : loan.status === "DISPUTE" ? "danger" : loan.status?.toLowerCase()}`}>
                 {loan.status === "PENDING" && "Menunggu"}
                 {loan.status === "APPROVED" && "Siap Diambil"}
-                {loan.status === "ONGOING" && (loan.return_ ? "Sedang Diperiksa" : "Sedang Dipinjam")}
+                {loan.status === "ONGOING" && (
+                  loan.return_ ? "Sedang Diperiksa" : 
+                  loan.isReceived ? "Sedang Dipinjam" : "Menunggu Konfirmasi"
+                )}
                 {loan.status === "AWAITING_FINE" && "Butuh Penilaian"}
+                {loan.status === "DISPUTE" && "Sengketa"}
                 {loan.status === "DONE" && "Selesai"}
                 {loan.status === "REJECTED" && "Ditolak"}
               </span>
@@ -113,16 +166,97 @@ export default function LoanDetailPage() {
               </div>
             </div>
 
+            {/* Finance & Status Card (NEW) */}
+            {loan.return_ && (loan.return_.fineLate > 0 || loan.return_.fineDamage > 0) && (
+              <div className="detail-section" style={{ 
+                background: loan.return_.paymentStatus === "PAID" ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)", 
+                padding: "32px",
+                borderRadius: "28px",
+                border: loan.return_.paymentStatus === "PAID" ? "2px solid rgba(16, 185, 129, 0.2)" : "2px solid rgba(239, 68, 68, 0.2)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 32
+              }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 800, opacity: 0.6, letterSpacing: 1, marginBottom: 8 }}>TAGIHAN DENDA TERAKHIR</div>
+                  <div style={{ fontSize: "2.4rem", fontWeight: 900, color: "var(--sidebar-navy)" }}>
+                    {formatCurrency(loan.return_.fineLate + loan.return_.fineDamage)}
+                  </div>
+                  <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                     <span style={{ fontSize: "0.85rem", padding: "6px 12px", borderRadius: 10, background: "rgba(0,0,0,0.05)", fontWeight: 700 }}>Late: {formatCurrency(loan.return_.fineLate)}</span>
+                     <span style={{ fontSize: "0.85rem", padding: "6px 12px", borderRadius: 10, background: "rgba(0,0,0,0.05)", fontWeight: 700 }}>Damage: {formatCurrency(loan.return_.fineDamage)}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ 
+                    fontSize: "1.2rem", 
+                    fontWeight: 900, 
+                    color: loan.return_.paymentStatus === "PAID" ? "var(--accent-green)" : "var(--accent-red)",
+                    marginBottom: 8
+                  }}>
+                    {loan.return_.paymentStatus === "PAID" ? "✅ LUNAS" : "❌ BELUM LUNAS"}
+                  </div>
+                  {loan.return_.paymentStatus === "PAID" && loan.return_.paidAt && (
+                    <div style={{ fontSize: "0.7rem", fontWeight: 700, opacity: 0.6, marginBottom: 16 }}>
+                      Dibayar pada: {formatDate(loan.return_.paidAt)}
+                    </div>
+                  )}
+                  {session?.user?.role === "ADMIN" && (
+                    <button 
+                      className={`btn btn-${loan.return_.paymentStatus === "PAID" ? "secondary" : "success"}`}
+                      style={{ padding: "12px 24px" }}
+                      disabled={paymentMutation.isPending}
+                      onClick={() => paymentMutation.mutate({ 
+                        status: loan.return_.paymentStatus === "PAID" ? "UNPAID" : "PAID" 
+                      })}
+                    >
+                      {paymentMutation.isPending ? "..." : loan.return_.paymentStatus === "PAID" ? "Batalkan Lunas" : "Tandai Lunas"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 2. Physical Units (If Picked Up) */}
             {loan.loanUnits?.length > 0 && (
+
               <div className="detail-section">
-                <div className="section-title">Unit Fisik yang Diterima</div>
+                <div className="section-title">Unit Fisik & Kondisi</div>
                 <div style={{ padding: 24 }}>
-                  <div className="unit-chips" style={{ gap: 12 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {loan.loanUnits.map((lu: any) => (
-                      <div key={lu.id} className={`unit-chip badge-${lu.toolUnit?.status?.toLowerCase()}`} 
-                           style={{ padding: "12px 20px", borderRadius: 14, fontSize: "0.9rem", fontWeight: 800, border: "2px solid rgba(0,0,0,0.05)" }}>
-                        <span style={{ opacity: 0.5, marginRight: 4 }}>#</span>{lu.toolUnit?.code}
+                      <div key={lu.id} style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "space-between",
+                        padding: "12px 16px",
+                        background: "var(--bg-main)",
+                        borderRadius: 16,
+                        border: "1px solid var(--border-light)"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <span className={`badge badge-${lu.toolUnit?.status?.toLowerCase()}`} style={{ margin: 0, padding: "6px 12px", fontSize: "0.85rem" }}>
+                            {lu.toolUnit?.code}
+                          </span>
+                          {lu.note && (
+                            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                              — "{lu.note}"
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                           <span style={{ 
+                             fontSize: "0.75rem", 
+                             fontWeight: 800, 
+                             padding: "6px 12px", 
+                             borderRadius: 10,
+                             background: lu.condition === "GOOD" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                             color: lu.condition === "GOOD" ? "var(--accent-green)" : "var(--accent-red)"
+                           }}>
+                             {lu.condition === "GOOD" ? "✅ KONDISI BAIK" : lu.condition === "DAMAGED" ? "⚠️ LAPORAN RUSAK" : "❌ LAPORAN HILANG"}
+                           </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -205,19 +339,34 @@ export default function LoanDetailPage() {
                </div>
              )}
 
-             {/* 3. Actions (If Staff) */}
-             {session?.user?.role !== "PEMINJAM" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                   {loan.status === "APPROVED" && (
-                     <button className="btn btn-success" style={{ width: "100%", justifyContent: "center", padding: 14 }}>
-                        Tandai Sudah Diambil
-                     </button>
-                   )}
-                   <button onClick={() => window.print()} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", padding: 14 }}>
-                      Cetak Bukti Pinjam
-                   </button>
-                </div>
-             )}
+             {/* 3. Actions */}
+             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {session?.user?.role === "PEMINJAM" && loan.status === "ONGOING" && !loan.isReceived && (
+                  <button 
+                    className="btn btn-success" 
+                    style={{ width: "100%", justifyContent: "center", padding: 14 }}
+                    disabled={receiveMutation.isPending}
+                    onClick={() => receiveMutation.mutate(loan.id)}
+                  >
+                    {receiveMutation.isPending ? "Memproses..." : "Konfirmasi Terima Barang"}
+                  </button>
+                )}
+                
+                {session?.user?.role !== "PEMINJAM" && loan.status === "APPROVED" && (
+                  <button 
+                    className="btn btn-success" 
+                    style={{ width: "100%", justifyContent: "center", padding: 14 }}
+                    disabled={pickupMutation.isPending}
+                    onClick={() => pickupMutation.mutate(loan.id)}
+                  >
+                    {pickupMutation.isPending ? "Memproses..." : "Tandai Sudah Diambil (Pickup)"}
+                  </button>
+                )}
+                
+                <button onClick={() => window.print()} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center", padding: 14 }}>
+                  Cetak Bukti Pinjam
+                </button>
+             </div>
 
           </div>
 

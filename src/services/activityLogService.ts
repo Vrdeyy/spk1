@@ -19,3 +19,4 @@ export async function createActivityLog(
     console.error("Failed to create activity log:", error);
   }
 }
+ 

@@ -73,6 +73,13 @@ enum UnitStatus {
   AVAILABLE
   BORROWED
   DAMAGED
+  LOST
+}
+
+enum ItemCondition {
+  GOOD
+  DAMAGED
+  LOST
 }
 
 model Loan {
@@ -82,8 +89,9 @@ model Loan {
   reason    String     @db.Text
   noteAdmin String?    @db.Text
   dueDate   DateTime
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  isReceived Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   user      User       @relation(fields: [userId], references: [id])
   items     LoanItem[]
@@ -99,6 +107,7 @@ enum LoanStatus {
   REJECTED
   ONGOING
   AWAITING_FINE
+  DISPUTE
   DONE
 }
 
@@ -124,19 +133,30 @@ model LoanUnit {
   loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
   toolUnit   ToolUnit @relation(fields: [toolUnitId], references: [id])
 
+  condition  ItemCondition @default(GOOD)
+  note       String?       @db.Text
+
   @@unique([loanId, toolUnitId])
   @@map("loan_units")
 }
 
-model Return {
-  id         String   @id @default(cuid())
-  loanId     String   @unique
-  returnedAt DateTime @default(now())
-  fineLate   Int      @default(0)
-  fineDamage Int      @default(0)
-  note       String?  @db.Text
+enum FinePaymentStatus {
+  UNPAID
+  PAID
+}
 
-  loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+model Return {
+  id            String            @id @default(cuid())
+  loanId        String            @unique
+  returnedAt    DateTime          @default(now())
+  fineLate      Int               @default(0)
+  fineDamage    Int               @default(0)
+  note          String?           @db.Text
+  inspectionNote String?          @db.Text
+  paymentStatus FinePaymentStatus @default(UNPAID)
+  paidAt        DateTime?
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   @@map("returns")
 }

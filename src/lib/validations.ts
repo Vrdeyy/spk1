@@ -57,7 +57,8 @@ export const loanApprovalSchema = z.object({
 export const adminLoanUpdateSchema = z.object({
   reason: z.string().optional(),
   dueDate: z.string().optional(),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED", "ONGOING", "DONE"]).optional(),
+  status: z.enum(["PENDING", "APPROVED", "REJECTED", "ONGOING", "DONE", "AWAITING_FINE", "DISPUTE"]).optional(),
+  paymentStatus: z.enum(["UNPAID", "PAID"]).optional(),
   items: z.array(
     z.object({
       id: z.string().optional(), // loanItem ID
@@ -72,14 +73,22 @@ export const adminLoanUpdateSchema = z.object({
 // Return
 export const returnSchema = z.object({
   note: z.string().optional(),
-  damagedUnitIds: z.array(z.string()).optional(),
+  items: z.array(z.object({
+    toolUnitId: z.string(),
+    condition: z.enum(["GOOD", "DAMAGED", "LOST"]),
+    note: z.string().optional(),
+  })).optional(),
 });
 
 // Return Approval (by admin)
 export const returnApprovalSchema = z.object({
   fineDamage: z.number().int().min(0).optional(),
   note: z.string().optional(),
-  damagedUnitIds: z.array(z.string()).optional(),
+  items: z.array(z.object({
+    toolUnitId: z.string(),
+    condition: z.enum(["GOOD", "DAMAGED", "LOST"]),
+    note: z.string().optional(),
+  })).optional(),
 });
 
 // Setting

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { LoanStatus } from "@prisma/client";
 import { requireAuth, requireRole, handleApiError } from "@/lib/permission";
 import { returnSchema, returnApprovalSchema } from "@/lib/validations";
 import {
@@ -8,7 +9,7 @@ import {
 } from "@/services/notificationService";
 import { createActivityLog } from "@/services/activityLogService";
 
-// POST: User initiates return (creates Return record, status still ONGOING)
+// POST: User initiates return (creates Return record, sets initial conditions)
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
@@ -46,13 +47,32 @@ export async function POST(
         fineLate = diffDays * finePerDay;
       }
 
-      // Mark damaged units if any
-      if (data.damagedUnitIds && data.damagedUnitIds.length > 0) {
-        for (const unitId of data.damagedUnitIds) {
-          await tx.toolUnit.update({
-            where: { id: unitId },
-            data: { status: "DAMAGED" },
+      // Update unit conditions based on user report
+      let hasDamage = false;
+      if (data.items && data.items.length > 0) {
+        for (const item of data.items) {
+          if (item.condition !== "GOOD") hasDamage = true;
+          
+          await tx.loanUnit.update({
+            where: { 
+              loanId_toolUnitId: {
+                loanId: loan.id,
+                toolUnitId: item.toolUnitId
+              }
+            },
+            data: { 
+              condition: item.condition,
+              note: item.note || null
+            } as any
           });
+
+          // Also update ToolUnit status if damaged/lost so it's not borrowed again
+          if (item.condition !== "GOOD") {
+            await tx.toolUnit.update({
+              where: { id: item.toolUnitId },
+              data: { status: (item.condition === "LOST" ? "LOST" : "DAMAGED") as any }
+            });
+          }
         }
       }
 
@@ -64,13 +84,11 @@ export async function POST(
         },
       });
 
-      // KEY LOGIC: If damage reported OR it's being finalized with damage, move to AWAITING_FINE
-      const hasDamage = data.damagedUnitIds && data.damagedUnitIds.length > 0;
-      
+      // Update loan status
       await tx.loan.update({
         where: { id: params.id },
         data: {
-          status: hasDamage ? "AWAITING_FINE" : "ONGOING"
+          status: (hasDamage ? "AWAITING_FINE" : "ONGOING") as any 
         }
       });
 
@@ -78,17 +96,17 @@ export async function POST(
         session.user.id,
         "INITIATE_RETURN",
         `Pinjaman ${params.id}`,
-        `Peminjam mengajukan pengembalian. ${hasDamage ? "Dilaporkan ada kerusakan (Butuh Penilaian Admin)." : "Semua barang dilaporkan baik."}`
+        `Peminjam mengajukan pengembalian. ${hasDamage ? "Ada laporan kerusakan/kehilangan." : "Semua barang dilaporkan baik."}`
       );
 
       return returnRecord;
     });
 
     // Notify staff
-    const hasDamage = data.damagedUnitIds && data.damagedUnitIds.length > 0;
+    const hasDamage = result.fineLate > 0 || result.fineDamage > 0; // Simplified check
     await notifyAdminsAndPetugas(
-      hasDamage ? "⚠️ Butuh Penilaian Denda" : "Permintaan Pengembalian",
-      `${session.user?.name || "User"} mengajukan pengembalian #${params.id.slice(-6).toUpperCase()}.${hasDamage ? " ADA KERUSAKAN." : ""}${data.note ? ` Pesan: ${data.note}` : ""}`
+      "Permintaan Pengembalian",
+      `${session.user?.name || "User"} mengajukan pengembalian #${params.id.slice(-6).toUpperCase()}.${data.note ? ` Pesan: ${data.note}` : ""}`
     );
 
     return NextResponse.json(result, { status: 201 });
@@ -118,14 +136,58 @@ export async function PUT(
       if (existing.status === "DONE") throw new Error("Pinjaman sudah selesai");
 
       // VALIDATION: Only Admin can set denda
-      if (session.user.role === "PETUGAS" && data.fineDamage > 0) {
+      if (session.user.role === "PETUGAS" && (data.fineDamage ?? 0) > 0) {
         throw new Error("Hanya Admin yang berwenang menetapkan nominal denda kerusakan.");
       }
 
-      const hasDamageInInput = data.damagedUnitIds && data.damagedUnitIds.length > 0;
+      // 1. Process Item conditions from Staff POV (Staff report ALWAYS overrides for assessment)
+      let hasDispute = false;
+      if (data.items && data.items.length > 0) {
+        for (const item of data.items) {
+          const currentUnit = existing.loanUnits.find(lu => lu.toolUnitId === item.toolUnitId);
+          
+          // Check for dispute: User said GOOD, Staff says NOT GOOD
+          if ((currentUnit as any)?.condition === "GOOD" && item.condition !== "GOOD") {
+            hasDispute = true;
+          }
 
+          await tx.loanUnit.update({
+            where: { 
+              loanId_toolUnitId: {
+                loanId: existing.id,
+                toolUnitId: item.toolUnitId
+              }
+            },
+            data: { 
+              condition: item.condition as any,
+              inspectionNote: item.note || null
+            }
+          });
+
+          // Update physical unit status immediately based on staff report
+          await tx.toolUnit.update({
+            where: { id: item.toolUnitId },
+            data: { 
+              status: (item.condition === "GOOD" ? "AVAILABLE" : 
+                      item.condition === "LOST" ? "LOST" : "DAMAGED") as any 
+            }
+          });
+        }
+      } else {
+        // Fallback: If no items provided, use existing units
+        for (const lu of existing.loanUnits) {
+          const newStatus = (lu as any).condition === "GOOD" ? "AVAILABLE" : 
+                            (lu as any).condition === "LOST" ? "LOST" : "DAMAGED";
+          
+          await tx.toolUnit.update({
+            where: { id: lu.toolUnitId },
+            data: { status: newStatus as any }
+          });
+        }
+      }
+
+      // 2. Handle Return Record
       if (!existing.return_) {
-        // Create return directly (Case where return request hasn't been made yet)
         const settings = await tx.setting.findFirst();
         const finePerDay = settings?.finePerDay || 5000;
         const now = new Date();
@@ -133,9 +195,7 @@ export async function PUT(
         let fineLate = 0;
 
         if (now > dueDate) {
-          const diffDays = Math.ceil(
-            (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-          );
+          const diffDays = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
           fineLate = diffDays * finePerDay;
         }
 
@@ -148,49 +208,62 @@ export async function PUT(
           },
         });
       } else {
-        // Update return record with damage fine
         await tx.return.update({
           where: { id: existing.return_.id },
           data: {
             fineDamage: data.fineDamage || 0,
-            note: data.note || existing.return_.note,
-          },
+            inspectionNote: (data.note || (existing.return_ as any).inspectionNote) as any,
+          } as any,
         });
       }
 
-      // Update unit status to AVAILABLE or DAMAGED
-      for (const lu of existing.loanUnits) {
-        const isDamaged = data.damagedUnitIds?.includes(lu.toolUnitId);
-        await tx.toolUnit.update({
-          where: { id: lu.toolUnitId },
-          data: { status: isDamaged ? "DAMAGED" : "AVAILABLE" },
-        });
+      // 3. Finalize Loan Status
+      let finalStatus: LoanStatus = "DONE" as any;
+      if (hasDispute) {
+        finalStatus = "DISPUTE" as any;
+      } else {
+        const hasDamage = data.items?.some(i => i.condition !== "GOOD");
+        if (hasDamage && (data.fineDamage || 0) === 0) {
+          finalStatus = "AWAITING_FINE" as any;
+        } else {
+          finalStatus = "DONE" as any;
+        }
       }
 
       await createActivityLog(
         session.user.id,
         "FINALIZE_RETURN",
         `Pinjaman ${params.id}`,
-        `${session.user.role === "ADMIN" ? "Admin" : "Petugas"} menyelesaikan pengembalian. Status: Selesai.`
+        `${session.user.role === "ADMIN" ? "Admin" : "Petugas"} memverifikasi pengembalian. Status: ${finalStatus}.`
       );
 
       return tx.loan.update({
         where: { id: params.id },
-        data: { status: "DONE" },
+        data: { status: finalStatus as any },
         include: {
           user: true,
           return_: true,
           items: { include: { tool: true } },
+          loanUnits: { include: { toolUnit: true } },
         },
       });
     });
 
-    // Notify user
-    await createNotification(
-      loan.userId,
-      "Pengembalian Selesai",
-      `Pengembalian pinjaman Anda telah diselesaikan.`
-    );
+    // Notify interested parties
+    if ((loan.status as any) === "AWAITING_FINE") {
+      await notifyAdminsAndPetugas(
+        "⚠️ Butuh Penilaian Denda",
+        `Petugas telah memverifikasi kerusakan pada pinjaman #${params.id.slice(-6).toUpperCase()}. Admin harap tentukan denda.`
+      );
+    } else {
+      await createNotification(
+        loan.userId,
+        (loan.status as any) === "DISPUTE" ? "⚠️ Pengembalian Bermasalah" : "Pengembalian Selesai",
+        (loan.status as any) === "DISPUTE" 
+          ? `Ada ketidakcocokan data pada pengembalian Anda. Harap hubungi Admin.`
+          : `Pengembalian pinjaman Anda telah diselesaikan.`
+      );
+    }
 
     return NextResponse.json(loan);
   } catch (error) {

@@ -237,6 +237,7 @@ export default function EditToolPage() {
                            >
                               <option value="AVAILABLE">Tersedia</option>
                               <option value="DAMAGED">Rusak</option>
+                              <option value="LOST">Hilang</option>
                               <option value="BORROWED" disabled>Dipinjam</option>
                            </select>
                            <button type="button" className="btn btn-danger btn-sm" style={{ padding: 6 }} onClick={() => removeUnit(unit.id)}>

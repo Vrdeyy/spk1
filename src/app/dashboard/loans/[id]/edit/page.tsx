@@ -18,6 +18,7 @@ export default function AdminEditLoanPage() {
     status: "",
     dueDate: "",
     items: [] as any[],
+    paymentStatus: "UNPAID",
   });
 
   const { data: loan, isLoading: isLoadingLoan } = useQuery({
@@ -42,6 +43,7 @@ export default function AdminEditLoanPage() {
           qtyRequested: i.qtyRequested,
           qtyApproved: i.qtyApproved,
         })) || [],
+        paymentStatus: loan.return_?.paymentStatus || "UNPAID",
       });
     }
   }, [loan]);
@@ -137,7 +139,7 @@ export default function AdminEditLoanPage() {
             updateMutation.mutate(form);
           }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 32 }}>
-              <div style={{ display: "flex", flexContent: "column", gap: 32, flexDirection: "column" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
                 {/* General Info */}
                 <div className="detail-section">
                   <div className="section-title">Informasi Umum</div>
@@ -240,6 +242,8 @@ export default function AdminEditLoanPage() {
                         <option value="PENDING">PENDING</option>
                         <option value="APPROVED">APPROVED</option>
                         <option value="ONGOING">ONGOING</option>
+                        <option value="AWAITING_FINE">AWAITING_FINE</option>
+                        <option value="DISPUTE">DISPUTE</option>
                         <option value="DONE">DONE</option>
                         <option value="REJECTED">REJECTED</option>
                       </select>
@@ -254,6 +258,20 @@ export default function AdminEditLoanPage() {
                         required
                       />
                     </div>
+                    {loan.return_ && (
+                      <div className="form-group">
+                        <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Status Pembayaran Denda</label>
+                        <select
+                          className="form-input"
+                          style={{ fontWeight: 600, color: form.paymentStatus === "PAID" ? "var(--accent-green)" : "var(--accent-red)" }}
+                          value={form.paymentStatus}
+                          onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}
+                        >
+                          <option value="UNPAID">❌ BELUM LUNAS</option>
+                          <option value="PAID">✅ LUNAS</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </div>
 

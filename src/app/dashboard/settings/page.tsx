@@ -95,7 +95,7 @@ export default function SettingsPage() {
                 >
                   {updateMutation.isPending ? (
                     <>
-                      <div className="spinner" style={{ width: 14, height: 14, borderThickness: 2 }} />
+                      <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
                       Menyimpan...
                     </>
                   ) : "Simpan Perubahan"}

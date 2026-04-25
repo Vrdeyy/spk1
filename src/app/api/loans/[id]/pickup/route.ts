@@ -62,7 +62,7 @@ export async function POST(
 
       return tx.loan.update({
         where: { id: params.id },
-        data: { status: "ONGOING" },
+        data: { status: "ONGOING", isReceived: false },
         include: {
           items: { include: { tool: true } },
           loanUnits: { include: { toolUnit: true } },
