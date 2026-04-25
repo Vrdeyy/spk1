@@ -19,6 +19,7 @@ export default function AdminEditLoanPage() {
     dueDate: "",
     items: [] as any[],
     paymentStatus: "UNPAID",
+    noteAdmin: "",
   });
 
   const { data: loan, isLoading: isLoadingLoan } = useQuery({
@@ -44,6 +45,7 @@ export default function AdminEditLoanPage() {
           qtyApproved: i.qtyApproved,
         })) || [],
         paymentStatus: loan.return_?.paymentStatus || "UNPAID",
+        noteAdmin: loan.noteAdmin || "",
       });
     }
   }, [loan]);
@@ -153,6 +155,16 @@ export default function AdminEditLoanPage() {
                         onChange={(e) => setForm({ ...form, reason: e.target.value })}
                         required
                         placeholder="Masukkan alasan peminjaman..."
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Catatan Admin</label>
+                      <textarea
+                        className="form-input"
+                        style={{ minHeight: 80, border: "1px dashed var(--accent-purple)", background: "rgba(139, 92, 246, 0.02)" }}
+                        value={form.noteAdmin}
+                        onChange={(e) => setForm({ ...form, noteAdmin: e.target.value })}
+                        placeholder="Tambahkan catatan internal atau pesan untuk user..."
                       />
                     </div>
                   </div>

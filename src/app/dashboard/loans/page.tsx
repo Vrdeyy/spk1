@@ -15,24 +15,15 @@ export default function LoansPage() {
   const isPetugas = role === "PETUGAS";
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [showReturnModal, setShowReturnModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDetailAlert, setShowDetailAlert] = useState(true);
   const [selectedLoan, setSelectedLoan] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Approval form state
   const [approvalForm, setApprovalForm] = useState({
     action: "APPROVED" as "APPROVED" | "REJECTED",
     noteAdmin: "",
     items: [] as { loanItemId: string; qtyApproved: number }[],
-  });
-
-  // Return form state
-  const [returnForm, setReturnForm] = useState({
-    note: "",
-    items: [] as { toolUnitId: string; condition: "GOOD" | "DAMAGED" | "LOST"; note?: string }[],
-    fineDamage: 0,
   });
 
   const { data: loans, isLoading } = useQuery({
@@ -118,53 +109,6 @@ export default function LoansPage() {
     },
   });
 
-  // RETURN (user initiates)
-  const returnMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      fetch(`/api/loans/${id}/return`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json();
-          throw new Error(err.error);
-        }
-        return r.json();
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["loans"] });
-      setShowReturnModal(false);
-    },
-    onError: (error: any) => {
-      alert(error.message || "Gagal mengajukan pengembalian");
-    },
-  });
-
-  // FINALIZE return (admin/petugas)
-  const finalizeMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      fetch(`/api/loans/${id}/return`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json();
-          throw new Error(err.error);
-        }
-        return r.json();
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["loans"] });
-      queryClient.invalidateQueries({ queryKey: ["tools"] });
-      setShowReturnModal(false);
-    },
-    onError: (error: any) => {
-      alert(error.message || "Gagal memproses pengembalian");
-    },
-  });
-
   // DELETE loan (admin only)
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
@@ -193,22 +137,6 @@ export default function LoansPage() {
       })),
     });
     setShowApprovalModal(true);
-  };
-
-  // Open return modal
-  const openReturn = (loan: any, isFinalize: boolean = false) => {
-    setSelectedLoan({ ...loan, isFinalize });
-    
-    setReturnForm({ 
-      note: isFinalize ? (loan.return_?.inspectionNote || "") : (loan.return_?.note || ""), 
-      fineDamage: loan.return_?.fineDamage || 0,
-      items: loan.loanUnits?.map((lu: any) => ({
-        toolUnitId: lu.toolUnitId,
-        condition: lu.condition || "GOOD",
-        note: lu.note || ""
-      })) || [],
-    });
-    setShowReturnModal(true);
   };
 
   // Open detail
@@ -387,16 +315,16 @@ export default function LoansPage() {
                           </button>
                         )}
 
-                        {isStaff && loan.status === "AWAITING_FINE" && isAdmin && (
-                          <button className="btn btn-danger btn-sm" onClick={() => openReturn(loan, true)}>
-                            Tentukan Denda
-                          </button>
+                        {isStaff && (loan.status === "AWAITING_FINE" || loan.status === "DISPUTE") && isAdmin && (
+                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-danger btn-sm">
+                            {loan.status === "DISPUTE" ? "Selesaikan Sengketa" : "Tentukan Denda"}
+                          </Link>
                         )}
 
                         {isStaff && loan.status === "AWAITING_FINE" && !isAdmin && (
-                          <button className="btn btn-secondary btn-sm" onClick={() => openReturn(loan, true)}>
+                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-secondary btn-sm">
                             Cek Ulang
-                          </button>
+                          </Link>
                         )}
 
                         {/* Button: Return Request (Staff Side - for Inspection) */}
@@ -405,26 +333,26 @@ export default function LoansPage() {
                             {!loan.isReceived && !isAdmin ? (
                               <span className="badge badge-warning" style={{ fontSize: "0.65rem" }}>Menunggu Konfirmasi User</span>
                             ) : (
-                              <button
+                              <Link
+                                href={`/dashboard/loans/${loan.id}/return`}
                                 className="btn btn-warning btn-sm"
-                                onClick={() => openReturn(loan, true)}
                               >
                                 Periksa Barang
-                              </button>
+                              </Link>
                             )}
                           </>
                         )}
 
                         {isPeminjam && loan.status === "ONGOING" && loan.isReceived && !loan.return_ && (
-                          <button className="btn btn-warning btn-sm" onClick={() => openReturn(loan)}>
+                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-warning btn-sm">
                             Kembali
-                          </button>
+                          </Link>
                         )}
 
                         {isStaff && loan.status === "ONGOING" && !loan.return_ && (
-                          <button className="btn btn-success btn-sm" onClick={() => openReturn(loan, true)}>
+                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-success btn-sm">
                             Selesaikan
-                          </button>
+                          </Link>
                         )}
                       </div>
                     </td>
@@ -547,265 +475,7 @@ export default function LoansPage() {
         </div>
       )}
 
-      {/* ========== RETURN MODAL ========== */}
-      {showReturnModal && selectedLoan && (
-        <div className="modal-overlay" onClick={() => setShowReturnModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{selectedLoan.isFinalize ? "Selesaikan Pengembalian" : "Kembalikan Barang"}</h2>
-              <button className="modal-close" onClick={() => setShowReturnModal(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {(() => {
-                const now = new Date();
-                const due = new Date(selectedLoan.dueDate);
-                const isLate = now > due;
-                const diffDays = isLate ? Math.ceil((now.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                return isLate ? (
-                  <div className="alert alert-error" style={{ borderRadius: 16 }}>
-                    ⚠️ <strong>Terlambat {diffDays} hari!</strong> Denda keterlambatan akan dihitung otomatis.
-                  </div>
-                ) : null;
-              })()}
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-                {selectedLoan.return_ && (
-                  <div className="detail-section" style={{ background: "white", border: "1px solid var(--border-light)", height: "100%", display: "flex", flexDirection: "column" }}>
-                    <div className="section-title" style={{ padding: "16px 20px", background: "rgba(0,0,0,0.02)" }}>Informasi Pelaporan User</div>
-                    <div style={{ padding: "20px", flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
-                      <div>
-                        <div className="label" style={{ marginBottom: 10, fontSize: "0.65rem", letterSpacing: 1 }}>PESAN USER</div>
-                        <div style={{ 
-                          background: "var(--bg-main)", 
-                          padding: "16px", 
-                          borderRadius: "16px", 
-                          fontSize: "0.9rem", 
-                          fontStyle: "italic",
-                          color: "var(--sidebar-navy)",
-                          lineHeight: 1.6,
-                          position: "relative",
-                          border: "1px solid var(--border-light)"
-                        }}>
-                          "{selectedLoan.return_.note || "Tidak ada pesan tambahan dari peminjam."}"
-                        </div>
-                      </div>
-
-                      <div className="detail-grid" style={{ gridTemplateColumns: "1fr 1fr", borderTop: "1px solid var(--border-light)", paddingTop: 16 }}>
-                        <div className="detail-item">
-                          <div className="label">Denda Telat</div>
-                          <div className="value" style={{ color: selectedLoan.return_.fineLate > 0 ? "var(--accent-red)" : "inherit", fontWeight: 800 }}>
-                            {formatCurrency(selectedLoan.return_?.fineLate || 0)}
-                          </div>
-                        </div>
-                        <div className="detail-item">
-                          <div className="label">Tgl Kembali</div>
-                          <div className="value" style={{ fontWeight: 600 }}>{formatDate(selectedLoan.return_?.returnedAt)}</div>
-                        </div>
-                      </div>
-
-                      {returnForm.items.some(i => i.condition !== "GOOD") && (
-                        <div style={{ 
-                          marginTop: "auto",
-                          padding: "12px 16px", 
-                          borderRadius: "12px", 
-                          background: "rgba(239, 68, 68, 0.08)", 
-                          border: "1px solid rgba(239, 68, 68, 0.2)",
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 10
-                        }}>
-                           <span style={{ fontSize: "1.2rem" }}>⚠️</span>
-                           <div style={{ fontSize: "0.75rem", color: "#b91c1c", lineHeight: 1.5 }}>
-                              <strong style={{ display: "block", marginBottom: 2 }}>Daftar Kerusakan/Hilang:</strong>
-                              Unit {returnForm.items
-                                .filter(i => i.condition !== "GOOD")
-                                .map(i => {
-                                  const lu = selectedLoan.loanUnits.find((u: any) => u.toolUnitId === i.toolUnitId);
-                                  return lu?.toolUnit?.code;
-                                })
-                                .join(", ")}
-                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedLoan.isFinalize && (
-                  <div className="detail-section" style={{ 
-                    background: "rgba(239, 68, 68, 0.04)", 
-                    border: "2px solid rgba(239, 68, 68, 0.1)",
-                    borderRadius: "24px",
-                    display: "flex",
-                    flexDirection: "column"
-                  }}>
-                    <div className="section-title" style={{ color: "var(--accent-red)", padding: "16px 20px", background: "rgba(239, 68, 68, 0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span>Penilaian Denda (Admin Only)</span>
-                      <span style={{ fontSize: "0.7rem", fontWeight: 700, opacity: 0.6 }}>LATE: {formatCurrency(selectedLoan.return_?.fineLate || 0)}</span>
-                    </div>
-
-                    <div style={{ padding: "32px 24px", flex: 1, display: "flex", flexDirection: "column", gap: 24 }}>
-                        <div className="form-group" style={{ marginBottom: 0 }}>
-                           <label style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--accent-red)", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Denda Kerusakan/Hilang</label>
-                           <div style={{ position: "relative" }}>
-                              <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontWeight: 900, opacity: 0.3, fontSize: "1.2rem" }}>Rp</span>
-                              <input
-                                type="number"
-                                className="form-input"
-                                min={0}
-                                placeholder="0"
-                                disabled={role !== "ADMIN"}
-                                value={returnForm.fineDamage}
-                                style={{ 
-                                  paddingLeft: 50,
-                                  fontSize: "1.8rem", 
-                                  fontWeight: 900, 
-                                  color: "var(--accent-red)", 
-                                  height: "70px",
-                                  borderRadius: "20px",
-                                  background: (role === "ADMIN") ? "white" : "rgba(0,0,0,0.03)",
-                                  border: (role === "ADMIN") ? "2px solid var(--accent-red)" : "2px solid rgba(239, 68, 68, 0.1)",
-                                  cursor: (role === "ADMIN") ? "text" : "not-allowed"
-                                }}
-                                onChange={(e) => setReturnForm({ ...returnForm, fineDamage: parseInt(e.target.value) || 0 })}
-                              />
-                           </div>
-                        </div>
-
-                        <div style={{ padding: "20px", background: "var(--sidebar-navy)", borderRadius: "20px", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                           <div>
-                              <div style={{ fontSize: "0.65rem", fontWeight: 700, opacity: 0.6, letterSpacing: 1 }}>TOTAL HARUS DIBAYAR</div>
-                              <div style={{ fontSize: "1.4rem", fontWeight: 900, marginTop: 4 }}>
-                                 {formatCurrency((selectedLoan.return_?.fineLate || 0) + (returnForm.fineDamage || 0))}
-                              </div>
-                           </div>
-                           <div style={{ opacity: 0.3 }}>
-                              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20m0-20L17 5m-5-3L7 5M12 22l-5-3m5 3l5-3"/></svg>
-                           </div>
-                        </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {selectedLoan.loanUnits?.length > 0 && (
-                <div className="detail-section" style={{ border: "1px solid var(--border-light)", background: "#fff", padding: 0 }}>
-                  <div className="section-title" style={{ padding: "12px 20px", background: "rgba(0,0,0,0.02)", fontSize: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>Update Kondisi Unit Fisik</span>
-                    <span className="badge badge-primary" style={{ fontSize: "0.6rem", padding: "4px 8px" }}>Total: {returnForm.items.length} Unit</span>
-                  </div>
-                  <div style={{ padding: "0" }}>
-                    {returnForm.items.length === 0 && (
-                      <div style={{ padding: 20, textAlign: "center", fontSize: "0.8rem", opacity: 0.6 }}>Tidak ada unit fisik terdeteksi.</div>
-                    )}
-                    {returnForm.items.map((item, idx) => {
-                      const lu = selectedLoan.loanUnits.find((u: any) => u.toolUnitId === item.toolUnitId);
-                      return (
-                        <div key={item.toolUnitId} style={{ 
-                          padding: "16px 20px", 
-                          display: "grid", 
-                          gridTemplateColumns: "100px 1fr 150px", 
-                          gap: 16, 
-                          alignItems: "center",
-                          borderBottom: idx === returnForm.items.length - 1 ? "none" : "1px solid var(--border-light)"
-                        }}>
-                          <div style={{ fontWeight: 800, color: "var(--sidebar-navy)" }}>{lu?.toolUnit?.code}</div>
-                          <div>
-                            <input 
-                              type="text" 
-                              className="form-input" 
-                              style={{ 
-                                fontSize: "0.8rem", 
-                                padding: "8px 12px",
-                                background: role !== "PEMINJAM" ? "rgba(0,0,0,0.03)" : "white",
-                                cursor: role !== "PEMINJAM" ? "not-allowed" : "text"
-                              }} 
-                              placeholder={ role !== "PEMINJAM" ? "-" : "Catatan kondisi (opsional)..." } 
-                              value={item.note || ""}
-                              readOnly={role !== "PEMINJAM"}
-                              onChange={(e) => {
-                                if (role !== "PEMINJAM") return;
-                                setReturnForm(prev => ({
-                                  ...prev,
-                                  items: prev.items.map(i => i.toolUnitId === item.toolUnitId ? { ...i, note: e.target.value } : i)
-                                }));
-                              }}
-                            />
-                          </div>
-                          <select 
-                            className="form-input" 
-                            style={{ 
-                              fontSize: "0.8rem", 
-                              fontWeight: 700,
-                              color: item.condition === "GOOD" ? "var(--accent-green)" : "var(--accent-red)",
-                              background: item.condition === "GOOD" ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)"
-                            }}
-                            value={item.condition}
-                            onChange={(e) => {
-                              setReturnForm(prev => ({
-                                ...prev,
-                                items: prev.items.map(i => i.toolUnitId === item.toolUnitId ? { ...i, condition: e.target.value as any } : i)
-                               }));
-                            }}
-                          >
-                            <option value="GOOD">✅ BAIK</option>
-                            <option value="DAMAGED">⚠️ RUSAK</option>
-                            <option value="LOST">❌ HILANG</option>
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="form-group" style={{ marginTop: 24 }}>
-                <label style={{ 
-                  fontWeight: 800, 
-                  fontSize: "0.75rem", 
-                  textTransform: "uppercase", 
-                  marginBottom: 8, 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 8,
-                  color: (isAdmin && selectedLoan.status === "AWAITING_FINE") ? "var(--warning-dark)" : "var(--text-muted)"
-                }}>
-                  { (isAdmin && selectedLoan.status === "AWAITING_FINE") ? "⚠️ REKOMENDASI & CATATAN PETUGAS" : "Catatan Pemeriksaan" }
-                </label>
-                <textarea
-                  className="form-input"
-                  placeholder={(role === "ADMIN") ? "Lihat catatan petugas atau tulis keputusan denda..." : "Tulis alasan denda atau kondisi detail barang untuk Admin..."}
-                  value={returnForm.note}
-                  readOnly={(role === "ADMIN" && selectedLoan.status === "AWAITING_FINE")}
-                  style={{ 
-                    minHeight: 100,
-                    border: (role === "ADMIN" && selectedLoan.status === "AWAITING_FINE") ? "2px solid rgba(245, 158, 11, 0.2)" : "1px solid var(--border-light)",
-                    background: (role === "ADMIN" && selectedLoan.status === "AWAITING_FINE") ? "rgba(245, 158, 11, 0.05)" : "white",
-                    cursor: (role === "ADMIN" && selectedLoan.status === "AWAITING_FINE") ? "not-allowed" : "text"
-                  }}
-                  onChange={(e) => setReturnForm({ ...returnForm, note: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowReturnModal(false)}>Batal</button>
-              <button 
-                type="button"
-                className="btn btn-primary" 
-                style={{ padding: "12px 32px", fontSize: "0.9rem", fontWeight: 700 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (selectedLoan.isFinalize) finalizeMutation.mutate({ id: selectedLoan.id, data: returnForm });
-                  else returnMutation.mutate({ id: selectedLoan.id, data: returnForm });
-                }}
-                disabled={finalizeMutation.isPending || returnMutation.isPending}
-              >
-                { (finalizeMutation.isPending || returnMutation.isPending) ? "Memproses..." : "Konfirmasi" }
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+<div style={{ display: "none" }}>Modal Removed</div>
 
       {/* ========== DETAIL MODAL ========== */}
       {showDetailModal && selectedLoan && (

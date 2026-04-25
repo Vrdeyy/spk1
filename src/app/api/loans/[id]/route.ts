@@ -53,6 +53,7 @@ export async function PUT(
             reason: data.reason,
             dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
             status: data.status,
+            noteAdmin: data.noteAdmin,
           },
         });
 

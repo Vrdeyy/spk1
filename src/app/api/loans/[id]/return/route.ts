@@ -124,6 +124,7 @@ export async function PUT(
     const session = await requireAuth();
     await requireRole("ADMIN", "PETUGAS");
     const body = await request.json();
+    console.log("PUT /api/loans/[id]/return body:", body);
     const data = returnApprovalSchema.parse(body);
 
     const loan = await prisma.$transaction(async (tx) => {
@@ -136,8 +137,8 @@ export async function PUT(
       if (existing.status === "DONE") throw new Error("Pinjaman sudah selesai");
 
       // VALIDATION: Only Admin can set denda
-      if (session.user.role === "PETUGAS" && (data.fineDamage ?? 0) > 0) {
-        throw new Error("Hanya Admin yang berwenang menetapkan nominal denda kerusakan.");
+      if (session.user.role === "PETUGAS" && data.fineDamage !== undefined && data.fineDamage !== (existing.return_?.fineDamage ?? 0)) {
+        throw new Error("Hanya Admin yang berwenang mengubah nominal denda kerusakan.");
       }
 
       // 1. Process Item conditions from Staff POV (Staff report ALWAYS overrides for assessment)
@@ -219,11 +220,15 @@ export async function PUT(
 
       // 3. Finalize Loan Status
       let finalStatus: LoanStatus = "DONE" as any;
-      if (hasDispute) {
+      const isAdmin = session.user.role === "ADMIN";
+      
+      if (hasDispute && !isAdmin) {
         finalStatus = "DISPUTE" as any;
       } else {
         const hasDamage = data.items?.some(i => i.condition !== "GOOD");
-        if (hasDamage && (data.fineDamage || 0) === 0) {
+        const fineSet = (data.fineDamage || (existing.return_?.fineDamage || 0)) > 0;
+        
+        if (hasDamage && !fineSet) {
           finalStatus = "AWAITING_FINE" as any;
         } else {
           finalStatus = "DONE" as any;
@@ -234,7 +239,7 @@ export async function PUT(
         session.user.id,
         "FINALIZE_RETURN",
         `Pinjaman ${params.id}`,
-        `${session.user.role === "ADMIN" ? "Admin" : "Petugas"} memverifikasi pengembalian. Status: ${finalStatus}.`
+        `${session.user.role === "ADMIN" ? "Admin" : "Petugas"} memverifikasi pengembalian. ${finalStatus === "AWAITING_FINE" ? "Meneruskan ke Admin untuk penilaian denda." : `Status: ${finalStatus}.`}`
       );
 
       return tx.loan.update({
@@ -250,18 +255,25 @@ export async function PUT(
     });
 
     // Notify interested parties
-    if ((loan.status as any) === "AWAITING_FINE") {
+    if (loan.status === "AWAITING_FINE") {
       await notifyAdminsAndPetugas(
         "⚠️ Butuh Penilaian Denda",
-        `Petugas telah memverifikasi kerusakan pada pinjaman #${params.id.slice(-6).toUpperCase()}. Admin harap tentukan denda.`
+        `Petugas ${session.user.name} telah memverifikasi kerusakan pada pinjaman #${params.id.slice(-6).toUpperCase()}. Admin harap segera menentukan denda.`
       );
-    } else {
+    } else if (loan.status === "DONE") {
+      const totalFine = (loan.return_?.fineLate || 0) + (loan.return_?.fineDamage || 0);
       await createNotification(
         loan.userId,
-        (loan.status as any) === "DISPUTE" ? "⚠️ Pengembalian Bermasalah" : "Pengembalian Selesai",
-        (loan.status as any) === "DISPUTE" 
-          ? `Ada ketidakcocokan data pada pengembalian Anda. Harap hubungi Admin.`
-          : `Pengembalian pinjaman Anda telah diselesaikan.`
+        "Pengembalian Selesai",
+        totalFine > 0 
+          ? `Pengembalian pinjaman Anda telah diselesaikan. Anda dikenakan denda sebesar Rp ${totalFine.toLocaleString("id-ID")}. Harap segera melakukan pembayaran.`
+          : "Pengembalian pinjaman Anda telah disetujui dan dinyatakan selesai tanpa denda."
+      );
+    } else if (loan.status === "DISPUTE") {
+      await createNotification(
+        loan.userId,
+        "⚠️ Pengembalian Bermasalah",
+        "Ada ketidakcocokan data pada pengembalian Anda. Harap segera hubungi Admin."
       );
     }
 

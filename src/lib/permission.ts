@@ -31,6 +31,7 @@ export function handleApiError(error: unknown) {
     if (error.message === "FORBIDDEN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    console.error("API Error:", error);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

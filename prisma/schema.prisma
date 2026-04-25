@@ -135,6 +135,7 @@ model LoanUnit {
 
   condition  ItemCondition @default(GOOD)
   note       String?       @db.Text
+  inspectionNote String?   @db.Text
 
   @@unique([loanId, toolUnitId])
   @@map("loan_units")

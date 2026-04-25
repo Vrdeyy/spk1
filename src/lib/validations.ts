@@ -59,6 +59,7 @@ export const adminLoanUpdateSchema = z.object({
   dueDate: z.string().optional(),
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "ONGOING", "DONE", "AWAITING_FINE", "DISPUTE"]).optional(),
   paymentStatus: z.enum(["UNPAID", "PAID"]).optional(),
+  noteAdmin: z.string().optional(),
   items: z.array(
     z.object({
       id: z.string().optional(), // loanItem ID
