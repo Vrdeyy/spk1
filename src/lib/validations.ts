@@ -21,6 +21,7 @@ export const categorySchema = z.object({
 export const toolSchema = z.object({
   name: z.string().min(2, "Nama alat minimal 2 karakter"),
   brand: z.string().min(1, "Brand wajib diisi"),
+  imageUrl: z.string().url("URL gambar tidak valid").or(z.literal("")).optional(),
   categoryId: z.string().min(1, "Kategori wajib dipilih"),
   qty: z.number().int().min(1, "Jumlah minimal 1"),
 });
@@ -53,12 +54,12 @@ export const loanApprovalSchema = z.object({
     .optional(),
 });
 
-// Loan Admin Update
 export const adminLoanUpdateSchema = z.object({
   reason: z.string().optional(),
   dueDate: z.string().optional(),
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "ONGOING", "DONE", "AWAITING_FINE", "DISPUTE"]).optional(),
   paymentStatus: z.enum(["UNPAID", "PAID"]).optional(),
+  isReceived: z.boolean().optional(),
   noteAdmin: z.string().optional(),
   items: z.array(
     z.object({
@@ -66,6 +67,21 @@ export const adminLoanUpdateSchema = z.object({
       toolId: z.string(),
       qtyRequested: z.number().int().min(1),
       qtyApproved: z.number().int().min(0),
+    })
+  ).optional(),
+  // New fields for full edit
+  fineLate: z.number().int().min(0).optional(),
+  fineDamage: z.number().int().min(0).optional(),
+  returnNote: z.string().optional(),
+  inspectionNote: z.string().optional(),
+  returnedAt: z.string().optional(),
+  paidAt: z.string().optional(),
+  loanUnits: z.array(
+    z.object({
+      id: z.string(),
+      condition: z.enum(["GOOD", "DAMAGED", "LOST"]),
+      note: z.string().optional(),
+      inspectionNote: z.string().optional(),
     })
   ).optional(),
 });

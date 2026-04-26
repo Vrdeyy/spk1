@@ -19,7 +19,16 @@ export default function AdminEditLoanPage() {
     dueDate: "",
     items: [] as any[],
     paymentStatus: "UNPAID",
+    isReceived: false,
     noteAdmin: "",
+    // New fields
+    fineLate: 0,
+    fineDamage: 0,
+    returnNote: "",
+    inspectionNote: "",
+    returnedAt: "",
+    paidAt: "",
+    loanUnits: [] as any[],
   });
 
   const { data: loan, isLoading: isLoadingLoan } = useQuery({
@@ -45,7 +54,22 @@ export default function AdminEditLoanPage() {
           qtyApproved: i.qtyApproved,
         })) || [],
         paymentStatus: loan.return_?.paymentStatus || "UNPAID",
+        isReceived: loan.isReceived || false,
         noteAdmin: loan.noteAdmin || "",
+        fineLate: loan.return_?.fineLate || 0,
+        fineDamage: loan.return_?.fineDamage || 0,
+        returnNote: loan.return_?.note || "",
+        inspectionNote: loan.return_?.inspectionNote || "",
+        returnedAt: loan.return_?.returnedAt ? loan.return_.returnedAt.slice(0, 16) : "",
+        paidAt: loan.return_?.paidAt ? loan.return_.paidAt.slice(0, 16) : "",
+        loanUnits: loan.loanUnits?.map((lu: any) => ({
+          id: lu.id,
+          toolUnitId: lu.toolUnitId,
+          code: lu.toolUnit?.code,
+          condition: lu.condition,
+          note: lu.note || "",
+          inspectionNote: lu.inspectionNote || "",
+        })) || [],
       });
     }
   }, [loan]);
@@ -108,6 +132,12 @@ export default function AdminEditLoanPage() {
     });
   };
 
+  const handleUnitChange = (idx: number, field: string, value: any) => {
+    const newUnits = [...form.loanUnits];
+    newUnits[idx] = { ...newUnits[idx], [field]: value };
+    setForm({ ...form, loanUnits: newUnits });
+  };
+
   const removeItem = (idx: number) => {
     setForm({
       ...form,
@@ -142,38 +172,11 @@ export default function AdminEditLoanPage() {
           }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 32 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-                {/* General Info */}
-                <div className="detail-section">
-                  <div className="section-title">Informasi Umum</div>
-                  <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-                    <div className="form-group">
-                      <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Alasan Peminjaman</label>
-                      <textarea
-                        className="form-input"
-                        style={{ minHeight: 120 }}
-                        value={form.reason}
-                        onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                        required
-                        placeholder="Masukkan alasan peminjaman..."
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Catatan Admin</label>
-                      <textarea
-                        className="form-input"
-                        style={{ minHeight: 80, border: "1px dashed var(--accent-purple)", background: "rgba(139, 92, 246, 0.02)" }}
-                        value={form.noteAdmin}
-                        onChange={(e) => setForm({ ...form, noteAdmin: e.target.value })}
-                        placeholder="Tambahkan catatan internal atau pesan untuk user..."
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items */}
+                
+                {/* 1. Items List */}
                 <div className="detail-section">
                   <div className="section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>Barang & Jumlah</span>
+                    <span>Daftar Alat & Barang</span>
                     <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}>+ Tambah Barang</button>
                   </div>
                   <div style={{ padding: 0 }}>
@@ -236,6 +239,176 @@ export default function AdminEditLoanPage() {
                     )}
                   </div>
                 </div>
+
+                {/* 2. Finance & Returns (If applicable) */}
+                {(form.status === "DONE" || form.status === "AWAITING_FINE" || loan.return_) && (
+                  <div className="detail-section" style={{ background: "rgba(0,0,0,0.01)" }}>
+                    <div className="section-title">Keuangan & Pengembalian</div>
+                    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Tgl Dikembalikan</label>
+                          <input
+                            type="datetime-local"
+                            className="form-input"
+                            value={form.returnedAt}
+                            onChange={(e) => setForm({ ...form, returnedAt: e.target.value })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Status Pembayaran</label>
+                          <select
+                            className="form-input"
+                            style={{ fontWeight: 700, color: form.paymentStatus === "PAID" ? "var(--accent-green)" : "var(--accent-red)" }}
+                            value={form.paymentStatus}
+                            onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}
+                          >
+                            <option value="UNPAID">❌ BELUM LUNAS</option>
+                            <option value="PAID">✅ LUNAS</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Denda Terlambat</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            value={form.fineLate}
+                            onChange={(e) => setForm({ ...form, fineLate: parseInt(e.target.value) || 0 })}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Denda Kerusakan</label>
+                          <input
+                            type="number"
+                            className="form-input"
+                            value={form.fineDamage}
+                            onChange={(e) => setForm({ ...form, fineDamage: parseInt(e.target.value) || 0 })}
+                          />
+                        </div>
+                      </div>
+
+                      {form.paymentStatus === "PAID" && (
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Tgl Dibayar</label>
+                          <input
+                            type="datetime-local"
+                            className="form-input"
+                            value={form.paidAt}
+                            onChange={(e) => setForm({ ...form, paidAt: e.target.value })}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Informasi Tambahan (Notes) */}
+                <div className="detail-section">
+                  <div className="section-title">Informasi Tambahan</div>
+                  <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Alasan Peminjaman</label>
+                      <textarea
+                        className="form-input"
+                        style={{ minHeight: 100 }}
+                        value={form.reason}
+                        onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                        placeholder="Masukkan alasan peminjaman..."
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-purple)" }}>Catatan Admin (Internal)</label>
+                      <textarea
+                        className="form-input"
+                        style={{ minHeight: 80, border: "1px dashed var(--accent-purple)", background: "rgba(139, 92, 246, 0.02)" }}
+                        value={form.noteAdmin}
+                        onChange={(e) => setForm({ ...form, noteAdmin: e.target.value })}
+                        placeholder="Catatan persetujuan..."
+                      />
+                    </div>
+
+                    {(form.status === "DONE" || form.status === "AWAITING_FINE" || loan.return_) && (
+                      <>
+                        <div style={{ paddingTop: 16, borderTop: "1px dashed var(--border-light)" }}>
+                          <div className="form-group">
+                            <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)" }}>Pesan Pengembalian Peminjam</label>
+                            <input
+                              type="text"
+                              className="form-input"
+                              style={{ fontStyle: "italic" }}
+                              value={form.returnNote}
+                              onChange={(e) => setForm({ ...form, returnNote: e.target.value })}
+                              placeholder="Pesan dari user..."
+                            />
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-purple)" }}>Catatan Inspeksi Petugas</label>
+                          <textarea
+                            className="form-input"
+                            style={{ minHeight: 80 }}
+                            value={form.inspectionNote}
+                            onChange={(e) => setForm({ ...form, inspectionNote: e.target.value })}
+                            placeholder="Kesimpulan pengecekan..."
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Loan Units */}
+                {form.loanUnits.length > 0 && (
+                  <div className="detail-section">
+                    <div className="section-title">Unit Fisik & Kondisi</div>
+                    <div style={{ padding: "0 24px" }}>
+                      {form.loanUnits.map((lu, idx) => (
+                        <div key={lu.id} style={{ 
+                          padding: "20px 0", 
+                          borderBottom: idx === form.loanUnits.length - 1 ? "none" : "1px solid var(--border-light)",
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                            <span className="badge badge-secondary" style={{ fontWeight: 800 }}>{lu.code}</span>
+                            <select
+                              className="form-input"
+                              style={{ width: "auto", minWidth: 150 }}
+                              value={lu.condition}
+                              onChange={(e) => handleUnitChange(idx, "condition", e.target.value)}
+                            >
+                              <option value="GOOD">✅ GOOD</option>
+                              <option value="DAMAGED">⚠️ DAMAGED</option>
+                              <option value="LOST">❌ LOST</option>
+                            </select>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                            <div className="form-group">
+                              <label style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Catatan Peminjam</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={lu.note}
+                                onChange={(e) => handleUnitChange(idx, "note", e.target.value)}
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Catatan Inspeksi</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={lu.inspectionNote}
+                                onChange={(e) => handleUnitChange(idx, "inspectionNote", e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Status & Actions */}
@@ -270,18 +443,18 @@ export default function AdminEditLoanPage() {
                         required
                       />
                     </div>
-                    {loan.return_ && (
-                      <div className="form-group">
-                        <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Status Pembayaran Denda</label>
-                        <select
-                          className="form-input"
-                          style={{ fontWeight: 600, color: form.paymentStatus === "PAID" ? "var(--accent-green)" : "var(--accent-red)" }}
-                          value={form.paymentStatus}
-                          onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}
-                        >
-                          <option value="UNPAID">❌ BELUM LUNAS</option>
-                          <option value="PAID">✅ LUNAS</option>
-                        </select>
+                    {form.status === "ONGOING" && (
+                      <div className="form-group" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <input
+                          type="checkbox"
+                          id="isReceived"
+                          checked={form.isReceived}
+                          onChange={(e) => setForm({ ...form, isReceived: e.target.checked })}
+                          style={{ width: 20, height: 20 }}
+                        />
+                        <label htmlFor="isReceived" style={{ fontWeight: 800, fontSize: "0.8rem", color: "var(--sidebar-navy)", marginBottom: 0, cursor: "pointer" }}>
+                          Sudah Diterima User
+                        </label>
                       </div>
                     )}
                   </div>

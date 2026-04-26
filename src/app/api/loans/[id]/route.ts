@@ -53,6 +53,7 @@ export async function PUT(
             reason: data.reason,
             dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
             status: data.status,
+            isReceived: data.isReceived,
             noteAdmin: data.noteAdmin,
           },
         });
@@ -83,14 +84,72 @@ export async function PUT(
           }
         }
 
-        if (data.paymentStatus) {
-          await tx.return.updateMany({
-            where: { loanId: params.id },
-            data: { 
-              paymentStatus: data.paymentStatus as any,
-              paidAt: data.paymentStatus === "PAID" ? new Date() : null
+        if (data.paymentStatus || data.fineLate !== undefined || data.fineDamage !== undefined || data.returnNote !== undefined || data.inspectionNote !== undefined || data.returnedAt !== undefined || data.paidAt !== undefined) {
+          const returnExists = await tx.return.findUnique({ where: { loanId: params.id } });
+          
+          if (returnExists) {
+            await tx.return.update({
+              where: { loanId: params.id },
+              data: { 
+                paymentStatus: data.paymentStatus as any,
+                fineLate: data.fineLate,
+                fineDamage: data.fineDamage,
+                note: data.returnNote,
+                inspectionNote: data.inspectionNote,
+                returnedAt: data.returnedAt ? new Date(data.returnedAt) : undefined,
+                paidAt: data.paidAt ? new Date(data.paidAt) : (data.paymentStatus === "PAID" ? new Date() : null)
+              }
+            });
+          } else if (data.status === "DONE" || data.status === "AWAITING_FINE" || data.returnedAt) {
+            // Create return if it doesn't exist but status implies it should
+            await tx.return.create({
+              data: {
+                loanId: params.id,
+                paymentStatus: (data.paymentStatus as any) || "UNPAID",
+                fineLate: data.fineLate || 0,
+                fineDamage: data.fineDamage || 0,
+                note: data.returnNote || null,
+                inspectionNote: data.inspectionNote || null,
+                returnedAt: data.returnedAt ? new Date(data.returnedAt) : new Date(),
+                paidAt: data.paidAt ? new Date(data.paidAt) : (data.paymentStatus === "PAID" ? new Date() : null)
+              }
+            });
+          }
+        }
+
+        if (data.loanUnits) {
+          for (const lu of data.loanUnits) {
+            await tx.loanUnit.update({
+              where: { id: lu.id },
+              data: {
+                condition: lu.condition,
+                note: lu.note,
+                inspectionNote: lu.inspectionNote,
+              }
+            });
+            
+            // Also update the ToolUnit status if condition changed
+            const loanUnit = await tx.loanUnit.findUnique({
+              where: { id: lu.id },
+              select: { toolUnitId: true }
+            });
+            
+            if (loanUnit) {
+               let unitStatus: any = "BORROWED";
+               if (data.status === "DONE") {
+                 unitStatus = lu.condition === "GOOD" ? "AVAILABLE" : lu.condition === "DAMAGED" ? "DAMAGED" : "LOST";
+               } else if (lu.condition === "DAMAGED") {
+                 unitStatus = "DAMAGED";
+               } else if (lu.condition === "LOST") {
+                 unitStatus = "LOST";
+               }
+               
+               await tx.toolUnit.update({
+                 where: { id: loanUnit.toolUnitId },
+                 data: { status: unitStatus }
+               });
             }
-          });
+          }
         }
 
         await createActivityLog(

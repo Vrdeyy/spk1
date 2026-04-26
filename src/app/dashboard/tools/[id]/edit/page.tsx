@@ -16,6 +16,7 @@ export default function EditToolPage() {
   const [form, setForm] = useState({
     name: "",
     brand: "",
+    imageUrl: "",
     categoryId: "",
     addNewQty: 0,
     units: [] as any[],
@@ -37,6 +38,7 @@ export default function EditToolPage() {
       setForm({
         name: tool.name || "",
         brand: tool.brand || "",
+        imageUrl: tool.imageUrl || "",
         categoryId: tool.categoryId || "",
         addNewQty: 0,
         units: tool.units || [],
@@ -155,7 +157,7 @@ export default function EditToolPage() {
                         placeholder="Contoh: Bor Listrik Maktec"
                       />
                     </div>
-                    <div className="form-group">
+                     <div className="form-group">
                       <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Brand / Merek</label>
                       <input
                         className="form-input"
@@ -164,6 +166,28 @@ export default function EditToolPage() {
                         required
                         placeholder="Contoh: Bosch, Makita"
                       />
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>URL Gambar (Opsional)</label>
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <input
+                            className="form-input"
+                            value={form.imageUrl}
+                            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                            placeholder="https://example.com/tool.jpg"
+                          />
+                          <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>Biarkan kosong jika tidak ada gambar.</p>
+                        </div>
+                        {form.imageUrl && (
+                          <img 
+                            src={form.imageUrl} 
+                            alt="Preview" 
+                            style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", border: "1px solid var(--border-light)" }}
+                            onError={(e) => (e.currentTarget.style.display = "none")}
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="form-group">
                       <label style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 8, display: "block" }}>Kategori</label>

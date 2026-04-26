@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         data: {
           name: data.name,
           brand: data.brand,
+          imageUrl: data.imageUrl,
           categoryId: data.categoryId,
         },
       });
