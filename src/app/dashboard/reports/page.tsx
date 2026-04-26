@@ -48,12 +48,7 @@ export default function ReportsPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Laporan</h1>
-          <p className="description">Export data pinjaman ke Excel</p>
-        </div>
-      </div>
+
 
       <div className="page-body">
         <div className="detail-section">

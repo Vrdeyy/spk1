@@ -118,16 +118,13 @@ export default function EditToolPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link href="/dashboard/tools" className="btn btn-secondary btn-sm" style={{ padding: "6px 12px" }}>
               ← Kembali
             </Link>
-            <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Inventaris / Edit Alat</span>
           </div>
-          <h1>Edit Alat & Barang</h1>
-          <p className="description">Perbarui informasi aset dan kelola unit fisik</p>
         </div>
       </div>
 

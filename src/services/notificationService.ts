@@ -3,14 +3,15 @@ import { prisma } from "@/lib/prisma";
 export async function createNotification(
   userId: string,
   title: string,
-  message: string
+  message: string,
+  loanId?: string
 ) {
   return prisma.notification.create({
-    data: { userId, title, message },
+    data: { userId, title, message, loanId },
   });
 }
 
-export async function notifyAdminsAndPetugas(title: string, message: string) {
+export async function notifyAdminsAndPetugas(title: string, message: string, loanId?: string) {
   const staff = await prisma.user.findMany({
     where: { role: { in: ["ADMIN", "PETUGAS"] } },
     select: { id: true },
@@ -21,6 +22,7 @@ export async function notifyAdminsAndPetugas(title: string, message: string) {
       userId: s.id,
       title,
       message,
+      loanId
     })),
   });
 }

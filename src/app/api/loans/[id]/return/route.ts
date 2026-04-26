@@ -88,7 +88,7 @@ export async function POST(
       await tx.loan.update({
         where: { id: params.id },
         data: {
-          status: (hasDamage ? "AWAITING_FINE" : "ONGOING") as any 
+          status: "ONGOING" as any 
         }
       });
 
@@ -106,7 +106,8 @@ export async function POST(
     const hasDamage = result.fineLate > 0 || result.fineDamage > 0; // Simplified check
     await notifyAdminsAndPetugas(
       "Permintaan Pengembalian",
-      `${session.user?.name || "User"} mengajukan pengembalian #${params.id.slice(-6).toUpperCase()}.${data.note ? ` Pesan: ${data.note}` : ""}`
+      `${session.user?.name || "User"} mengajukan pengembalian #${params.id.slice(-6).toUpperCase()}.${data.note ? ` Pesan: ${data.note}` : ""}`,
+      params.id
     );
 
     return NextResponse.json(result, { status: 201 });
@@ -258,7 +259,8 @@ export async function PUT(
     if (loan.status === "AWAITING_FINE") {
       await notifyAdminsAndPetugas(
         "⚠️ Butuh Penilaian Denda",
-        `Petugas ${session.user.name} telah memverifikasi kerusakan pada pinjaman #${params.id.slice(-6).toUpperCase()}. Admin harap segera menentukan denda.`
+        `Petugas ${session.user.name} telah memverifikasi kerusakan pada pinjaman #${params.id.slice(-6).toUpperCase()}. Admin harap segera menentukan denda.`,
+        params.id
       );
     } else if (loan.status === "DONE") {
       const totalFine = (loan.return_?.fineLate || 0) + (loan.return_?.fineDamage || 0);
@@ -267,13 +269,15 @@ export async function PUT(
         "Pengembalian Selesai",
         totalFine > 0 
           ? `Pengembalian pinjaman Anda telah diselesaikan. Anda dikenakan denda sebesar Rp ${totalFine.toLocaleString("id-ID")}. Harap segera melakukan pembayaran.`
-          : "Pengembalian pinjaman Anda telah disetujui dan dinyatakan selesai tanpa denda."
+          : "Pengembalian pinjaman Anda telah disetujui dan dinyatakan selesai tanpa denda.",
+        params.id
       );
     } else if (loan.status === "DISPUTE") {
       await createNotification(
         loan.userId,
         "⚠️ Pengembalian Bermasalah",
-        "Ada ketidakcocokan data pada pengembalian Anda. Harap segera hubungi Admin."
+        "Ada ketidakcocokan data pada pengembalian Anda. Harap segera hubungi Admin.",
+        params.id
       );
     }
 

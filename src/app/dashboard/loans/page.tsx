@@ -152,7 +152,6 @@ export default function LoansPage() {
   if (isLoading) {
     return (
       <div className="page-enter">
-        <div className="page-header"><div><h1>Pinjaman</h1></div></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -160,21 +159,13 @@ export default function LoansPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Pinjaman</h1>
-          <p className="description">
-            {isPeminjam
-              ? "Ajukan dan pantau pinjaman alat"
-              : "Kelola semua pinjaman alat"}
-          </p>
-        </div>
-        {isPeminjam && (
+      {isPeminjam && (
+        <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
           <Link href="/dashboard/loans/create" className="btn btn-primary">
             + Ajukan Pinjaman
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="page-body">
         <div className="table-container">
@@ -321,11 +312,13 @@ export default function LoansPage() {
                           </Link>
                         )}
 
-                        {isStaff && loan.status === "AWAITING_FINE" && !isAdmin && (
-                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-secondary btn-sm">
-                            Cek Ulang
+                        {isStaff && loan.status === "AWAITING_FINE" && !isAdmin && !loan.return_?.inspectionNote && (
+                          <Link href={`/dashboard/loans/${loan.id}/return`} className="btn btn-warning btn-sm">
+                            Verifikasi Barang
                           </Link>
                         )}
+
+
 
                         {/* Button: Return Request (Staff Side - for Inspection) */}
                         {isStaff && loan.status === "ONGOING" && loan.return_ && (
@@ -560,7 +553,8 @@ export default function LoansPage() {
                          }}>
                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                              <span className={`badge badge-${lu.toolUnit?.status?.toLowerCase()}`} style={{ margin: 0 }}>{lu.toolUnit?.code}</span>
-                             {lu.note && <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>— "{lu.note}"</span>}
+                             {lu.note && <div style={{ fontSize: "0.75rem", opacity: 0.7, fontStyle: "italic", marginTop: 2 }}>💬 User: "{lu.note}"</div>}
+                             {lu.inspectionNote && <div style={{ fontSize: "0.75rem", color: "var(--accent-purple)", fontWeight: 700, marginTop: 2 }}>🔍 Petugas: "{lu.inspectionNote}"</div>}
                            </div>
                            <span style={{ 
                              fontSize: "0.7rem", 

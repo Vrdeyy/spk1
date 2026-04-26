@@ -187,7 +187,8 @@ export async function PUT(
       data.action === "APPROVED" ? "Pinjaman Disetujui" : "Pinjaman Ditolak",
       data.action === "APPROVED"
         ? "Pinjaman Anda telah disetujui. Silakan ambil barang."
-        : `Pinjaman Anda ditolak. ${data.noteAdmin || ""}`
+        : `Pinjaman Anda ditolak. ${data.noteAdmin || ""}`,
+      params.id
     );
 
     return NextResponse.json(loan);

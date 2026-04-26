@@ -167,6 +167,7 @@ model Notification {
   userId    String
   title     String
   message   String   @db.Text
+  loanId    String?  
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 

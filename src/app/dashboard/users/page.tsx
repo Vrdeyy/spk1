@@ -56,7 +56,6 @@ export default function UsersPage() {
   if (isLoading) {
     return (
       <div className="page-enter">
-        <div className="page-header"><div><h1>Pengguna</h1></div></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -64,11 +63,7 @@ export default function UsersPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Pengguna</h1>
-          <p className="description">Kelola akun pengguna sistem</p>
-        </div>
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           + Tambah Pengguna
         </button>

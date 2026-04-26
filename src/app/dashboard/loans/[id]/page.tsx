@@ -100,29 +100,23 @@ export default function LoanDetailPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header" style={{ marginBottom: 32 }}>
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <button onClick={() => router.back()} className="btn btn-secondary btn-sm" style={{ padding: "8px 12px" }}>
             ← Kembali
           </button>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <h1 style={{ marginBottom: 0 }}>Detail Pinjaman #{loanId.slice(-6).toUpperCase()}</h1>
-              <span className={`badge badge-${(loan.status === "ONGOING" && loan.return_) ? "pending" : loan.status === "AWAITING_FINE" ? "warning" : loan.status === "DISPUTE" ? "danger" : loan.status?.toLowerCase()}`}>
-                {loan.status === "PENDING" && "Menunggu"}
-                {loan.status === "APPROVED" && "Siap Diambil"}
-                {loan.status === "ONGOING" && (
-                  loan.return_ ? "Sedang Diperiksa" : 
-                  loan.isReceived ? "Sedang Dipinjam" : "Menunggu Konfirmasi"
-                )}
-                {loan.status === "AWAITING_FINE" && "Butuh Penilaian"}
-                {loan.status === "DISPUTE" && "Sengketa"}
-                {loan.status === "DONE" && "Selesai"}
-                {loan.status === "REJECTED" && "Ditolak"}
-              </span>
-            </div>
-            <p className="description">Laporan lengkap riwayat dan status aset yang dipinjam.</p>
-          </div>
+          <span className={`badge badge-${(loan.status === "ONGOING" && loan.return_) ? "pending" : loan.status === "AWAITING_FINE" ? "warning" : loan.status === "DISPUTE" ? "danger" : loan.status?.toLowerCase()}`}>
+            {loan.status === "PENDING" && "Menunggu"}
+            {loan.status === "APPROVED" && "Siap Diambil"}
+            {loan.status === "ONGOING" && (
+              loan.return_ ? "Sedang Diperiksa" : 
+              loan.isReceived ? "Sedang Dipinjam" : "Menunggu Konfirmasi"
+            )}
+            {loan.status === "AWAITING_FINE" && "Butuh Penilaian"}
+            {loan.status === "DISPUTE" && "Sengketa"}
+            {loan.status === "DONE" && "Selesai"}
+            {loan.status === "REJECTED" && "Ditolak"}
+          </span>
         </div>
       </div>
 
@@ -218,7 +212,43 @@ export default function LoanDetailPage() {
               </div>
             )}
 
-            {/* 2. Physical Units (If Picked Up) */}
+            
+
+            {/* 3. Reason & Notes */}
+            <div className="detail-section">
+              <div className="section-title">Informasi Tambahan</div>
+              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>Alasan Peminjaman:</div>
+                  <div style={{ background: "var(--bg-main)", padding: 16, borderRadius: 12, lineHeight: 1.6, color: "var(--sidebar-navy)" }}>
+                    {loan.reason}
+                  </div>
+                </div>
+                {loan.noteAdmin && (
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>Catatan Admin (Persetujuan):</div>
+                    <div style={{ background: "rgba(107, 114, 255, 0.05)", padding: 16, borderRadius: 12, lineHeight: 1.6, border: "1px dashed var(--accent-purple)", color: "var(--sidebar-navy)" }}>
+                      {loan.noteAdmin}
+                    </div>
+                  </div>
+                )}
+                {loan.return_?.note && (
+                  <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px dashed var(--border-light)" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--sidebar-navy)", marginBottom: 8 }}>Pesan Pengembalian Peminjam:</div>
+                    <div style={{ background: "var(--bg-main)", padding: 16, borderRadius: 12, lineHeight: 1.6, border: "1px solid var(--border-light)", color: "var(--sidebar-navy)", fontStyle: "italic" }}>
+                      "{loan.return_.note}"
+                    </div>
+                  </div>
+                )}
+                {loan.return_?.inspectionNote && (
+                  <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px dashed var(--border-light)" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-purple)", marginBottom: 8 }}>Catatan Inspeksi Petugas (Kesimpulan):</div>
+                    <div style={{ background: "rgba(124, 58, 237, 0.03)", padding: 16, borderRadius: 12, lineHeight: 1.6, border: "1px solid rgba(124, 58, 237, 0.2)", color: "var(--sidebar-navy)" }}>
+                      {loan.return_.inspectionNote}
+                    </div>
+                  </div>
+                )}
+                {/* 2. Physical Units (If Picked Up) */}
             {loan.loanUnits?.length > 0 && (
 
               <div className="detail-section">
@@ -240,10 +270,16 @@ export default function LoanDetailPage() {
                             {lu.toolUnit?.code}
                           </span>
                           {lu.note && (
-                            <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontStyle: "italic" }}>
-                              — "{lu.note}"
-                            </span>
+                            <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontStyle: "italic", marginTop: 4 }}>
+                              💬 User: "{lu.note}"
+                            </div>
                           )}
+                          {lu.inspectionNote && (
+                            <div style={{ fontSize: "0.85rem", color: "var(--accent-purple)", fontWeight: 700, marginTop: 4 }}>
+                              🔍 Petugas: "{lu.inspectionNote}"
+                            </div>
+                          )}
+
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                            <span style={{ 
@@ -263,25 +299,6 @@ export default function LoanDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* 3. Reason & Notes */}
-            <div className="detail-section">
-              <div className="section-title">Informasi Tambahan</div>
-              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>Alasan Peminjaman:</div>
-                  <div style={{ background: "var(--bg-main)", padding: 16, borderRadius: 12, lineHeight: 1.6, color: "var(--sidebar-navy)" }}>
-                    {loan.reason}
-                  </div>
-                </div>
-                {loan.noteAdmin && (
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "var(--text-muted)", marginBottom: 8 }}>Catatan Admin:</div>
-                    <div style={{ background: "rgba(107, 114, 255, 0.05)", padding: 16, borderRadius: 12, lineHeight: 1.6, border: "1px dashed var(--accent-purple)", color: "var(--sidebar-navy)" }}>
-                      {loan.noteAdmin}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

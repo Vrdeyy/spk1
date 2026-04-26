@@ -63,7 +63,6 @@ export default function CreateLoanPage() {
   if (isLoadingTools) {
     return (
       <div className="page-enter">
-        <div className="page-header"><h1>Ajukan Pinjaman</h1></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -71,15 +70,13 @@ export default function CreateLoanPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Link href="/dashboard/loans" className="btn btn-secondary btn-sm" style={{ padding: "6px 12px" }}>
               ← Kembali
             </Link>
           </div>
-          <h1>Ajukan Pinjaman Baru</h1>
-          <p className="description">Pilih alat yang Anda butuhkan dan tentukan tanggal pengembaliannya.</p>
         </div>
       </div>
 

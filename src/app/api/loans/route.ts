@@ -108,7 +108,8 @@ export async function POST(request: Request) {
     // Notify staff
     await notifyAdminsAndPetugas(
       "Permintaan Pinjaman Baru",
-      `${loan.user.name} mengajukan pinjaman ${loan.items.length} item`
+      `${loan.user.name} mengajukan pinjaman ${loan.items.length} item`,
+      loan.id
     );
 
     return NextResponse.json(loan, { status: 201 });

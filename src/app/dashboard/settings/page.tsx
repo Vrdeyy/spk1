@@ -32,7 +32,6 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="page-enter">
-        <div className="page-header"><div><h1>Pengaturan</h1></div></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -40,12 +39,7 @@ export default function SettingsPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Pengaturan</h1>
-          <p className="description">Konfigurasi sistem</p>
-        </div>
-      </div>
+
 
       <div className="page-body">
         <div style={{ maxWidth: 800 }}>

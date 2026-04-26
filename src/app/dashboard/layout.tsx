@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,7 +48,7 @@ const icons: Record<string, React.ReactNode> = {
     </svg>
   ),
   notifications: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
     </svg>
   ),
@@ -77,13 +77,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const role = session?.user?.role;
 
   const { data: notifications } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => fetch("/api/notifications").then((r) => r.json()),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const unreadCount = notifications?.filter?.((n: any) => !n.isRead)?.length || 0;
@@ -114,13 +115,60 @@ export default function DashboardLayout({
         { href: "/dashboard/reports", label: "Laporan", roles: ["PETUGAS"] },
       ],
     },
-    {
-      section: "Lainnya",
-      items: [
-        { href: "/dashboard/notifications", label: "Notifikasi", roles: ["ADMIN", "PETUGAS", "PEMINJAM"] },
-      ],
-    },
   ];
+
+  const currentPath = pathname === "/dashboard" ? "/dashboard" : pathname;
+  const pageInfoMap: Record<string, { title: string; desc: string }> = {
+    "/dashboard": { 
+      title: "Dashboard", 
+      desc: `Selamat datang kembali, ${session?.user?.name || "..."}` 
+    },
+    "/dashboard/loans": { 
+      title: "Pinjaman", 
+      desc: "Kelola permintaan dan status peminjaman alat" 
+    },
+    "/dashboard/tools": { 
+      title: "Alat & Barang", 
+      desc: "Kelola inventaris alat dan barang" 
+    },
+    "/dashboard/categories": { 
+      title: "Kategori", 
+      desc: "Kelola kategori alat dan barang" 
+    },
+    "/dashboard/users": { 
+      title: "Pengguna", 
+      desc: "Manajemen akun dan hak akses pengguna" 
+    },
+    "/dashboard/settings": { 
+      title: "Pengaturan", 
+      desc: "Konfigurasi sistem dan preferensi profil" 
+    },
+    "/dashboard/logs": { 
+      title: "Log Aktivitas", 
+      desc: "Pantau riwayat aktivitas penggunaan sistem" 
+    },
+    "/dashboard/notifications": { 
+      title: "Notifikasi", 
+      desc: "Kotak masuk pemberitahuan sistem" 
+    },
+    "/dashboard/reports": { 
+      title: "Laporan", 
+      desc: "Rekap data dan laporan aktivitas" 
+    },
+  };
+
+  const pageInfo = pageInfoMap[currentPath] || { 
+    title: "Detail", 
+    desc: "Informasi detail data" 
+  };
+
+  const handleNotifClick = () => {
+    if (pathname === "/dashboard/notifications") {
+      router.back();
+    } else {
+      router.push("/dashboard/notifications");
+    }
+  };
 
   return (
     <div className="dashboard-layout">
@@ -165,28 +213,52 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="avatar">
-              {session?.user?.name?.[0]?.toUpperCase() || "?"}
-            </div>
-            <div className="user-info">
-              <div className="name">{session?.user?.name || "Loading..."}</div>
-              <div className="role">{role || "..."}</div>
-            </div>
-          </div>
-          <button
-            className="btn btn-secondary btn-sm btn-full"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            style={{ marginTop: 10, gap: 6 }}
-          >
-            {icons.logout}
-            Keluar
-          </button>
-        </div>
       </aside>
 
-      <main className="main-content">{children}</main>
+      <main className="main-content">
+        <header className="top-nav">
+          <div className="top-nav-left">
+            <div className="page-identity">
+              <h1>{pageInfo.title}</h1>
+              <p>{pageInfo.desc}</p>
+            </div>
+          </div>
+          <div className="top-nav-right">
+            <div className="top-nav-user">
+              <div className="user-avatar-mini">
+                {session?.user?.name?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div className="user-info-mini">
+                <span className="user-name">{session?.user?.name}</span>
+                <span className="user-role">{role}</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleNotifClick}
+              className={`notif-btn ${isActive("/dashboard/notifications") ? "active" : ""}`}
+              style={{ border: "none", background: "none", cursor: "pointer", position: "relative", padding: 0 }}
+            >
+              <div className="icon-wrapper">
+                {icons.notifications}
+                {unreadCount > 0 && <span className="badge-count">{unreadCount}</span>}
+              </div>
+            </button>
+
+            <button 
+              className="logout-nav-btn"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              title="Keluar"
+            >
+              {icons.logout}
+              <span>Keluar</span>
+            </button>
+          </div>
+        </header>
+        <div className="page-container">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

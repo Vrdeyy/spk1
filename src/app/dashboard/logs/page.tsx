@@ -61,7 +61,6 @@ export default function LogsPage() {
   if (isLoading) {
     return (
       <div className="page-enter">
-        <div className="page-header"><div><h1>Audit Log</h1></div></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -69,11 +68,7 @@ export default function LogsPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Riwayat Aktivitas & Peminjaman</h1>
-          <p className="description">Jejak langkah digital dari setiap perubahan aset dan status peminjaman.</p>
-        </div>
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
         <div className="header-actions" style={{ display: "flex", gap: 12 }}>
           <input 
             type="text" 

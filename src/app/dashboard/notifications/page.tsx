@@ -2,9 +2,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: notifications, isLoading } = useQuery({
     queryKey: ["notifications"],
@@ -52,13 +54,13 @@ export default function NotificationsPage() {
     if (t.includes("tolak") || t.includes("reject")) return "❌";
     if (t.includes("kembali") || t.includes("return")) return "📤";
     if (t.includes("telat") || t.includes("late")) return "⏰";
+    if (t.includes("bayar") || t.includes("denda") || t.includes("konfirmasi")) return "💰";
     return "🔔";
   };
 
   if (isLoading) {
     return (
       <div className="page-enter">
-        <div className="page-header"><div><h1>Notifikasi</h1></div></div>
         <div className="page-body"><div className="loader"><div className="spinner" /></div></div>
       </div>
     );
@@ -66,15 +68,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="page-enter">
-      <div className="page-header">
-        <div>
-          <h1>Pusat Notifikasi</h1>
-          <p className="description">
-            {unreadCount > 0
-              ? `Ada ${unreadCount} pesan baru yang membutuhkan perhatian Anda.`
-              : "Semua pesan telah dibaca. Anda sudah terupdate!"}
-          </p>
-        </div>
+      <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
         <div style={{ display: "flex", gap: 12 }}>
           {notifications?.length > 0 && (
             <button
@@ -105,6 +99,10 @@ export default function NotificationsPage() {
               <div
                 key={notif.id}
                 className={`notif-item ${!notif.isRead ? "unread" : ""}`}
+                onClick={() => {
+                   if (!notif.isRead) markSingleReadMutation.mutate(notif.id);
+                   if (notif.loanId) router.push(`/dashboard/loans/${notif.loanId}`);
+                }}
                 style={{ 
                    display: "flex", 
                    gap: 20, 
@@ -113,7 +111,9 @@ export default function NotificationsPage() {
                    backgroundColor: notif.isRead ? "var(--bg-card)" : "white",
                    borderLeft: notif.isRead ? "1px solid var(--border-light)" : "4px solid var(--accent-purple)",
                    opacity: notif.isRead ? 0.8 : 1,
-                   animation: "slideIn 0.4s ease-out"
+                   animation: "slideIn 0.4s ease-out",
+                   cursor: notif.loanId ? "pointer" : "default",
+                   transition: "all 0.2s ease"
                 }}
               >
                 <div style={{ 
@@ -145,20 +145,29 @@ export default function NotificationsPage() {
                         alignItems: "center",
                         gap: 8
                     }}>
+                        {notif.title.toLowerCase().includes("selesai") ? "🟣" : 
+                           (notif.title.toLowerCase().includes("konfirmasi") || notif.title.toLowerCase().includes("bayar") || notif.title.toLowerCase().includes("denda")) ? "💰" :
+                           notif.title.toLowerCase().includes("rusak") ? "⚠️" : "🔵"}
                         {notif.title}
                         {!notif.isRead && <span style={{ width: 8, height: 8, background: "var(--accent-purple)", borderRadius: "50%" }}></span>}
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                        {!notif.isRead && (
                           <button 
-                            onClick={() => markSingleReadMutation.mutate(notif.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markSingleReadMutation.mutate(notif.id);
+                            }}
                             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent-purple)", fontSize: "0.75rem", fontWeight: 700 }}
                           >
                             Tandai Dibaca
                           </button>
                        )}
                        <button 
-                         onClick={() => deleteOneMutation.mutate(notif.id)}
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           deleteOneMutation.mutate(notif.id);
+                         }}
                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
                        >
                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
