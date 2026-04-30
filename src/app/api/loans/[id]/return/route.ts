@@ -33,17 +33,22 @@ export async function POST(
         throw new Error("Pengembalian sudah diajukan sebelumnya");
       }
 
-      // Calculate late fine
-      const settings = await tx.setting.findFirst();
+      // Calculate late fine (ignore time, only date)
+      const settings = await tx.setting.findUnique({
+        where: { id: "default" },
+      });
       const finePerDay = settings?.finePerDay || 5000;
+      
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
       const dueDate = new Date(loan.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      
       let fineLate = 0;
-
       if (now > dueDate) {
-        const diffDays = Math.ceil(
-          (now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const diffTime = Math.abs(now.getTime() - dueDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         fineLate = diffDays * finePerDay;
       }
 
@@ -190,14 +195,21 @@ export async function PUT(
 
       // 2. Handle Return Record
       if (!existing.return_) {
-        const settings = await tx.setting.findFirst();
+        const settings = await tx.setting.findUnique({
+          where: { id: "default" },
+        });
         const finePerDay = settings?.finePerDay || 5000;
+        
         const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        
         const dueDate = new Date(existing.dueDate);
+        dueDate.setHours(0, 0, 0, 0);
+        
         let fineLate = 0;
-
         if (now > dueDate) {
-          const diffDays = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+          const diffTime = Math.abs(now.getTime() - dueDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           fineLate = diffDays * finePerDay;
         }
 

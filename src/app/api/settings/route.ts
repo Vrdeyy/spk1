@@ -6,7 +6,9 @@ import { settingSchema } from "@/lib/validations";
 // GET settings
 export async function GET() {
   try {
-    let settings = await prisma.setting.findFirst();
+    let settings = await prisma.setting.findUnique({
+      where: { id: "default" },
+    });
     if (!settings) {
       settings = await prisma.setting.create({
         data: { id: "default", finePerDay: 5000 },

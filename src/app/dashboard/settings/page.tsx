@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function SettingsPage() {
@@ -9,13 +9,14 @@ export default function SettingsPage() {
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ["settings"],
-    queryFn: () =>
-      fetch("/api/settings").then(async (r) => {
-        const data = await r.json();
-        setFinePerDay(data.finePerDay);
-        return data;
-      }),
+    queryFn: () => fetch("/api/settings").then((r) => r.json()),
   });
+
+  useEffect(() => {
+    if (settings && finePerDay === null) {
+      setFinePerDay(settings.finePerDay);
+    }
+  }, [settings, finePerDay]);
 
   const updateMutation = useMutation({
     mutationFn: (data: { finePerDay: number }) =>

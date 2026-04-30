@@ -44,19 +44,22 @@ export async function POST(request: Request) {
         data: {
           name: data.name,
           brand: data.brand,
-          imageUrl: data.imageUrl,
+          image: data.image,
           categoryId: data.categoryId,
         },
       });
 
-      // Generate unit codes
+      // Generate unit codes (unique per tool)
       const prefix = data.name
         .substring(0, 3)
         .toUpperCase()
         .replace(/[^A-Z]/g, "X");
+      
+      // Use last 4 chars of ID to ensure uniqueness even if names are same
+      const suffix = newTool.id.slice(-4).toUpperCase();
 
       const units = Array.from({ length: data.qty }, (_, i) => ({
-        code: `${prefix}-${String(i + 1).padStart(3, "0")}`,
+        code: `${prefix}-${suffix}-${String(i + 1).padStart(3, "0")}`,
         toolId: newTool.id,
         status: "AVAILABLE" as const,
       }));

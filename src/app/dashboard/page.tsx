@@ -78,14 +78,18 @@ export default function DashboardPage() {
     refetchInterval: 5000,
   });
 
-  const totalTools = tools?.length || 0;
-  const availableUnits = tools?.reduce((acc: number, t: any) => acc + (t.stockAvailable || 0), 0) || 0;
-  const borrowedUnits = tools?.reduce((acc: number, t: any) => acc + (t.stockBorrowed || 0), 0) || 0;
+  const safeTools = Array.isArray(tools) ? tools : [];
+  const safeLoans = Array.isArray(loans) ? loans : [];
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
-  const loansPending = loans?.filter?.((l: any) => l.status === "PENDING")?.length || 0;
-  const loansOngoing = loans?.filter?.((l: any) => l.status === "ONGOING")?.length || 0;
-  const loansApproved = loans?.filter?.((l: any) => l.status === "APPROVED")?.length || 0;
-  const totalLoans = loans?.length || 0;
+  const totalTools = safeTools.length;
+  const availableUnits = safeTools.reduce((acc: number, t: any) => acc + (t.stockAvailable || 0), 0);
+  const borrowedUnits = safeTools.reduce((acc: number, t: any) => acc + (t.stockBorrowed || 0), 0);
+
+  const loansPending = safeLoans.filter((l: any) => l.status === "PENDING").length;
+  const loansOngoing = safeLoans.filter((l: any) => l.status === "ONGOING").length;
+  const loansApproved = safeLoans.filter((l: any) => l.status === "APPROVED").length;
+  const totalLoans = safeLoans.length;
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("id-ID");
 
@@ -132,7 +136,7 @@ export default function DashboardPage() {
 
               {/* 2. ROLE-SPECIFIC WARNING BANNERS */}
               {role === "PEMINJAM" ? (
-                loans?.filter((l: any) => l.return_ && (l.return_.fineLate + l.return_.fineDamage > 0) && l.return_.paymentStatus === "UNPAID").length > 0 && (
+                safeLoans.filter((l: any) => l.return_ && (l.return_.fineLate + l.return_.fineDamage > 0) && l.return_.paymentStatus === "UNPAID").length > 0 && (
                   <div className="bento-card warning-banner">
                     <div className="banner-icon-bg">⚖️</div>
                     <div className="banner-content">
@@ -145,7 +149,7 @@ export default function DashboardPage() {
                   </div>
                 )
               ) : (
-                tools?.filter((t: any) => t.units?.some((u: any) => u.status === "DAMAGED" || u.status === "LOST")).length > 0 && (
+                safeTools.filter((t: any) => t.units?.some((u: any) => u.status === "DAMAGED" || u.status === "LOST")).length > 0 && (
                   <div className="bento-card damage-banner">
                     <div className="banner-icon-bg">⚠️</div>
                     <div className="banner-content">
@@ -177,7 +181,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="bento-card-mini">
                          <span className="mini-label">Selesai</span>
-                         <span className="mini-value">{loans?.filter((l: any) => l.status === "DONE").length || 0}</span>
+                         <span className="mini-value">{safeLoans.filter((l: any) => l.status === "DONE").length}</span>
                       </div>
                     </div>
                   ) : (
@@ -211,7 +215,7 @@ export default function DashboardPage() {
                   <button className="btn-text" onClick={() => (window.location.href = "/dashboard/notifications")}>Lihat Semua</button>
                </div>
                               <div className="notification-feed">
-                  {notifications?.slice(0, 8).map((notif: any, i: number) => (
+                  {safeNotifications.slice(0, 8).map((notif: any, i: number) => (
                     <div 
                       key={notif.id} 
                       className={`feed-item ${!notif.isRead ? "unread" : ""}`} 
@@ -238,7 +242,7 @@ export default function DashboardPage() {
                        </div>
                     </div>
                   ))}
-                  {(!notifications || notifications.length === 0) && (
+                  {safeNotifications.length === 0 && (
                     <div className="empty-feed">
                        <div className="empty-icon">🧘</div>
                        <p>Belum ada notifikasi baru hari ini.</p>

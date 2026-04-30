@@ -44,7 +44,7 @@ model Tool {
   id         String   @id @default(cuid())
   name       String
   brand      String
-  imageUrl   String?  @db.Text
+  image      String?  @db.LongText
   categoryId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

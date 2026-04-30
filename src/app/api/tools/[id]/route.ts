@@ -39,7 +39,7 @@ export async function PUT(
         data: {
           name: body.name,
           brand: body.brand,
-          imageUrl: body.imageUrl,
+          image: body.image,
           categoryId: body.categoryId,
         },
       });

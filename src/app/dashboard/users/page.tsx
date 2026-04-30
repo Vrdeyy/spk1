@@ -6,38 +6,14 @@ import Link from "next/link";
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "PEMINJAM",
-  });
+
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: () => fetch("/api/users").then((r) => r.json()),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(async (r) => {
-        if (!r.ok) {
-          const err = await r.json();
-          throw new Error(err.error);
-        }
-        return r.json();
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      setShowModal(false);
-      setForm({ name: "", email: "", password: "", role: "PEMINJAM" });
-    },
-  });
+
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
@@ -64,9 +40,9 @@ export default function UsersPage() {
   return (
     <div className="page-enter">
       <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <Link href="/dashboard/users/create" className="btn btn-primary">
           + Tambah Pengguna
-        </button>
+        </Link>
       </div>
 
       <div className="page-body">
@@ -163,92 +139,7 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Tambah Pengguna</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>
-                ✕
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate(form);
-              }}
-            >
-              <div className="modal-body">
-                {createMutation.isError && (
-                  <div className="alert alert-error">
-                    {(createMutation.error as Error).message}
-                  </div>
-                )}
-                <div className="form-group">
-                  <label>Nama</label>
-                  <input
-                    className="form-input"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    className="form-input"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Password</label>
-                  <input
-                    type="password"
-                    className="form-input"
-                    value={form.password}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Role</label>
-                  <select
-                    className="form-input"
-                    value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  >
-                    <option value="PEMINJAM">Peminjam</option>
-                    <option value="PETUGAS">Petugas</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowModal(false)}
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? "Menyimpan..." : "Simpan"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

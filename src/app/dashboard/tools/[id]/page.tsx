@@ -52,9 +52,9 @@ export default function ToolDetailPage() {
            {/* Visual Card */}
            <div className="bento-card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" }}>
-                 {tool.imageUrl && !imgError ? (
+                 {tool.image && !imgError ? (
                    <img 
-                    src={tool.imageUrl} 
+                    src={tool.image} 
                     alt={tool.name} 
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={() => setImgError(true)}

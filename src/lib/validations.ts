@@ -21,7 +21,7 @@ export const categorySchema = z.object({
 export const toolSchema = z.object({
   name: z.string().min(2, "Nama alat minimal 2 karakter"),
   brand: z.string().min(1, "Brand wajib diisi"),
-  imageUrl: z.string().url("URL gambar tidak valid").or(z.literal("")).optional(),
+  image: z.string().optional(),
   categoryId: z.string().min(1, "Kategori wajib dipilih"),
   qty: z.number().int().min(1, "Jumlah minimal 1"),
 });

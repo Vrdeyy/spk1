@@ -94,9 +94,9 @@ export default function CreateLoanPage() {
         >
           {/* Image Section */}
           <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "#f1f5f9" }}>
-            {tool.imageUrl && !imgError ? (
+            {tool.image && !imgError ? (
               <img 
-                src={tool.imageUrl} 
+                src={tool.image} 
                 alt={tool.name} 
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onError={() => setImgError(true)}
@@ -285,7 +285,7 @@ export default function CreateLoanPage() {
                               return (
                                 <div key={item.toolId} style={{ display: "flex", alignItems: "center", gap: 12, padding: 8, background: "var(--bg-main)", borderRadius: 14 }}>
                                    <div style={{ width: 40, height: 40, borderRadius: 10, overflow: "hidden", background: "white" }}>
-                                      {t?.imageUrl ? <img src={t.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "1rem" }}>🛠️</div>}
+                                      {t?.image ? <img src={t.image} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "1rem" }}>🛠️</div>}
                                    </div>
                                    <div style={{ flex: 1 }}>
                                       <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--sidebar-navy)" }}>{t?.name}</div>

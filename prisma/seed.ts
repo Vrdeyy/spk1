@@ -14,7 +14,7 @@ async function main() {
   });
 
   // Create admin
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const adminPassword = await bcrypt.hash("123456", 12);
   const admin = await prisma.user.upsert({
     where: { email: "admin@spk.com" },
     update: {},
@@ -28,7 +28,7 @@ async function main() {
   console.log("✅ Admin created:", admin.email);
 
   // Create petugas
-  const petugasPassword = await bcrypt.hash("petugas123", 12);
+  const petugasPassword = await bcrypt.hash("123456", 12);
   const petugas = await prisma.user.upsert({
     where: { email: "petugas@spk.com" },
     update: {},
@@ -42,13 +42,13 @@ async function main() {
   console.log("✅ Petugas created:", petugas.email);
 
   // Create peminjam
-  const peminjamPassword = await bcrypt.hash("user123", 12);
+  const peminjamPassword = await bcrypt.hash("123456", 12);
   const peminjam = await prisma.user.upsert({
     where: { email: "user@spk.com" },
     update: {},
     create: {
-      name: "Budi Santoso",
-      email: "user@spk.com",
+      name: "Rusel",
+      email: "rusel@spk.com",
       password: peminjamPassword,
       role: "PEMINJAM",
     },
@@ -57,9 +57,9 @@ async function main() {
 
   console.log("\n🎉 Seed complete!");
   console.log("📧 Login accounts:");
-  console.log("   Admin:    admin@spk.com / admin123");
-  console.log("   Petugas:  petugas@spk.com / petugas123");
-  console.log("   Peminjam: user@spk.com / user123");
+  console.log("   Admin:    admin@spk.com / 123456");
+  console.log("   Petugas:  petugas@spk.com / 123456");
+  console.log("   Peminjam: rusel@spk.com / 123456");
 }
 
 main()

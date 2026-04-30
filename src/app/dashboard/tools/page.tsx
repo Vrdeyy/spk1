@@ -11,21 +11,7 @@ export default function ToolsPage() {
   const role = session?.user?.role;
   const isAdmin = role === "ADMIN";
 
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    brand: "",
-    imageUrl: "",
-    categoryId: "",
-    qty: 1,
-    addNewQty: 0,
-    units: [] as any[],
-    deletedUnitIds: [] as string[],
-  });
-
-  const resetForm = () => {
-    setForm({ name: "", brand: "", imageUrl: "", categoryId: "", qty: 1, addNewQty: 0, units: [], deletedUnitIds: [] });
-  };
+  // Modal states and logic moved to dedicated routes
 
   // handleEdit removed, moved to new page route
 
@@ -39,22 +25,7 @@ export default function ToolsPage() {
     queryFn: () => fetch("/api/categories").then((r) => r.json()),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      fetch("/api/tools", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then((r) => {
-        if (!r.ok) throw new Error("Gagal menambah alat");
-        return r.json();
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tools"] });
-      setShowModal(false);
-      resetForm();
-    },
-  });
+  // createMutation moved to create/page.tsx
 
   // updateMutation removed, moved to new page route
 
@@ -91,9 +62,9 @@ export default function ToolsPage() {
       }}>
         {/* Image Section */}
         <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)" }}>
-          {tool.imageUrl && !imgError ? (
+          {tool.image && !imgError ? (
             <img 
-              src={tool.imageUrl} 
+              src={tool.image} 
               alt={tool.name} 
               style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s ease" }}
               onError={() => setImgError(true)}
@@ -155,7 +126,7 @@ export default function ToolsPage() {
           </div>
 
            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-             {tool.stockAvailable > 0 && (
+             {tool.stockAvailable > 0 && role === "PEMINJAM" && (
                <Link 
                 href="/dashboard/loans/create" 
                 className="btn btn-primary" 
@@ -197,9 +168,9 @@ export default function ToolsPage() {
     <div className="page-enter">
       {isAdmin && (
         <div className="page-header" style={{ borderBottom: "none", paddingBottom: 0, justifyContent: "flex-end" }}>
-          <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true); }}>
+          <Link href="/dashboard/tools/create" className="btn btn-primary">
             + Tambah Alat
-          </button>
+          </Link>
         </div>
       )}
 
@@ -265,89 +236,7 @@ export default function ToolsPage() {
         )}
       </div>
 
-      {/* Tool Modal (Add Only) */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => { setShowModal(false); resetForm(); }}>
-          <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Tambah Alat & Barang</h2>
-              <button className="modal-close" onClick={() => { setShowModal(false); resetForm(); }}>
-                ✕
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate(form);
-              }}
-            >
-              <div className="modal-body">
-                <div className="form-group" style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Nama Alat</label>
-                  <input
-                    className="form-input"
-                    placeholder="Contoh: Multimeter Digital"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                 <div className="form-group" style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>URL Gambar (Opsional)</label>
-                  <input
-                    className="form-input"
-                    placeholder="https://example.com/image.jpg"
-                    value={form.imageUrl}
-                    onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  />
-                  <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>Masukkan URL gambar alat yang valid.</p>
-                </div>
-                <div className="form-group" style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Brand / Merek</label>
-                  <input
-                    className="form-input"
-                    placeholder="Contoh: Fluke / Sanwa"
-                    value={form.brand}
-                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Kategori</label>
-                  <select
-                    className="form-input"
-                    value={form.categoryId}
-                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                    required
-                  >
-                    <option value="">Pilih Kategori</option>
-                    {categories?.map?.((cat: any) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Jumlah Unit Awal</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={1}
-                    value={form.qty}
-                    onChange={(e) => setForm({ ...form, qty: parseInt(e.target.value) || 1 })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowModal(false); resetForm(); }}>Batal</button>
-                <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Menyimpan..." : "Tambah Alat"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modals have been migrated to dedicated pages */}
     </div>
   );
 }
