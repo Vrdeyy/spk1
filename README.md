@@ -97,7 +97,7 @@ flowchart LR
     Petugas --> S2
     Petugas --> S3
     Petugas --> S4
-    pETUGAS --> P1
+    Petugas --> P1
 
     Admin --> S1
     Admin --> S2
