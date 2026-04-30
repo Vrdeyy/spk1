@@ -17,6 +17,7 @@ Sistem manajemen inventaris dan peminjaman alat untuk Lab/Bengkel. Direngkapi de
 ## 📐 Arsitektur Sistem
 
 ### 1. ERD (Entity Relationship Diagram)
+
 ```mermaid
 erDiagram
     USER ||--o{ LOAN : borrows
@@ -62,6 +63,7 @@ erDiagram
 ```
 
 ### 2. Use Case Diagram
+
 ```mermaid
 flowchart LR
     Peminjam((Peminjam))
@@ -95,6 +97,7 @@ flowchart LR
     Petugas --> S2
     Petugas --> S3
     Petugas --> S4
+    Petugas --> A3
 
     Admin --> S1
     Admin --> S2
@@ -102,7 +105,6 @@ flowchart LR
     Admin --> S4
     Admin --> A1
     Admin --> A2
-    Admin --> A3
 ```
 
 ---
@@ -122,11 +124,14 @@ flowchart LR
 ## 🚀 Panduan Setup
 
 ### 1. Prasyarat
+
 - Node.js versi 18.x atau terbaru.
 - MySQL Database.
 
 ### 2. Konfigurasi Environment
+
 Buat file `.env` di root direktori:
+
 ```env
 DATABASE_URL="mysql://root:@localhost:3306/spk_tools"
 AUTH_SECRET="buat-secret-random-disini"
@@ -134,6 +139,7 @@ NEXTAUTH_URL="http://localhost:3000"
 ```
 
 ### 3. Instalasi
+
 ```bash
 # 1. Install dependencies
 npm install
@@ -146,24 +152,27 @@ npm run db:generate
 ```
 
 ### 4. Menjalankan Aplikasi
+
 ```bash
 npm run dev
 ```
+
 Akses di: `http://localhost:3000`
 
 ---
 
 ## 👤 Akun Akses Default
 
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Admin** | `admin@spk.com` | `123456` |
-| **Petugas** | `petugas@spk.com` | `123456` |
-| **Peminjam** | `rusel@spk.com` | `123456` |
+| Role         | Email             | Password |
+| :----------- | :---------------- | :------- |
+| **Admin**    | `admin@spk.com`   | `123456` |
+| **Petugas**  | `petugas@spk.com` | `123456` |
+| **Peminjam** | `rusel@spk.com`   | `123456` |
 
 ---
 
 ## 📊 Fitur Utama
+
 - [x] **Modern Industrial UI**: Desain premium dengan Emerald theme.
 - [x] **Direct Image Upload**: Simpan foto alat langsung sebagai Base64.
 - [x] **Smart Fine System**: Denda telat otomatis & denda rusak manual.
@@ -173,4 +182,3 @@ Akses di: `http://localhost:3000`
 - [x] **Dedicated Routes**: Alur Create/Edit menggunakan halaman penuh (bukan pop-up).
 
 ---
-
