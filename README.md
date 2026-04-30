@@ -77,16 +77,16 @@ flowchart LR
     end
 
     subgraph Staff_Actions [Staff Actions]
-        S1(Manajemen Alat & Kategori)
-        S2(Approve/Reject Pinjaman)
-        S3(Proses Pickup)
-        S4(Verifikasi Kondisi)
+        S1(Approve/Reject Pinjaman)
+        S2(Proses Pickup)
+        S3(Verifikasi Kondisi)
+        S4(Export Laporan)
     end
 
     subgraph Admin_Actions [Admin Actions]
         A1(Manajemen User)
         A2(Konfigurasi Denda)
-        A3(Export Laporan)
+        A3(Manajemen Alat & Kategori)
     end
 
     Peminjam --> P1
