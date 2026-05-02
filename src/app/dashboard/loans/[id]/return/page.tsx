@@ -177,8 +177,24 @@ export default function LoanReturnPage() {
                   border: item.condition === "GOOD" ? "1px solid #e2e8f0" : "1px solid rgba(239, 68, 68, 0.2)"
                 }}>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--sidebar-navy)" }}>{lu?.toolUnit?.code}</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{lu?.toolUnit?.tool?.name}</div>
+                    <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--sidebar-navy)" }}>
+                      {lu?.toolUnit?.tool?.name}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                      Merk: {lu?.toolUnit?.tool?.brand}
+                    </div>
+                    <div style={{ 
+                      fontSize: "0.75rem", 
+                      color: "white", 
+                      background: "var(--sidebar-navy)", 
+                      display: "inline-block",
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      marginTop: 4,
+                      fontWeight: 800
+                    }}>
+                      {lu?.toolUnit?.code}
+                    </div>
                   </div>
                   
                   <div>

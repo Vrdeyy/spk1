@@ -18,7 +18,7 @@ export async function GET(
         items: {
           include: { tool: { include: { category: true } } },
         },
-        loanUnits: { include: { toolUnit: true } },
+        loanUnits: { include: { toolUnit: { include: { tool: true } } } },
         return_: true,
       },
     });
